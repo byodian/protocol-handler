@@ -1,35 +1,35 @@
 const functionCodeMap = {
   '01': {
-    'Relay': { 'memoryAddr': '0001', 'len': '0001' },
+    Relay: { memoryAddr: '0001', len: '0001' },
   },
   '04': {
-    'GridFreq': { 'address': '0004', 'len': '0001' }, 
-    'Leakage': { 'address': '0005', 'len': '0001' },
-    'TempA': { 'address': '0007', 'len': '0001' },
-    'Ua': { 'address': '0008', 'len': '0001' },
-    'Ia': { 'address': '0009', 'len': '0001' },
-    'PFa': { 'address': '000A', 'len': '0001' },
-    'Pa': { 'address': '000B', 'len': '0001' },
-    'Qa': { 'address': '000C', 'len': '0001' },
-    'Sa': { 'address': '000D', 'len': '0001' },
-    'TempB': { 'address': '0010', 'len': '0001' },
-    'Ub': { 'address': '0011', 'len': '0001' },
-    'Ib': { 'address': '0012', 'len': '0001' },
-    'PFb': { 'address': '0013', 'len': '0001' },
-    'Pb': { 'address': '0014', 'len': '0001' },
-    'Qb': { 'address': '0015', 'len': '0001' },
-    'Sb': { 'address': '0016', 'len': '0001' },
-    'TempC': { 'address': '0019', 'len': '0001' },
-    'Uc': { 'address': '001A', 'len': '0001' },
-    'Ic': { 'address': '001B', 'len': '0001' },
-    'PFc': { 'address': '001C', 'len': '0001' },
-    'Pc': { 'address': '001D', 'len': '0001' },
-    'Qc': { 'address': '001E', 'len': '0001' },
-    'Sc': { 'address': '001F', 'len': '0001' },
-    'P': { 'address': '0022', 'len': '0001' },
-    'Q': { 'address': '0023', 'len': '0001' },
-    'S': { 'address': '0024', 'len': '0001' },
-    'PEnergy': { 'address': '0025', 'len': '0002' }
+    GridFreq: { address: '0004', len: '0001' }, 
+    Leakage: { address: '0005', len: '0001' },
+    TempA: { address: '0007', len: '0001' },
+    Ua: { address: '0008', len: '0001' },
+    Ia: { address: '0009', len: '0001' },
+    PFa: { address: '000A', len: '0001' },
+    Pa: { address: '000B', len: '0001' },
+    Qa: { address: '000C', len: '0001' },
+    Sa: { address: '000D', len: '0001' },
+    TempB: { address: '0010', len: '0001' },
+    Ub: { address: '0011', len: '0001' },
+    Ib: { address: '0012', len: '0001' },
+    PFb: { address: '0013', len: '0001' },
+    Pb: { address: '0014', len: '0001' },
+    Qb: { address: '0015', len: '0001' },
+    Sb: { address: '0016', len: '0001' },
+    TempC: { address: '0019', len: '0001' },
+    Uc: { address: '001A', len: '0001' },
+    Ic: { address: '001B', len: '0001' },
+    PFc: { address: '001C', len: '0001' },
+    Pc: { address: '001D', len: '0001' },
+    Qc: { address: '001E', len: '0001' },
+    Sc: { address: '001F', len: '0001' },
+    P: { address: '0022', len: '0001' },
+    Q: { address: '0023', len: '0001' },
+    S: { address: '0024', len: '0001' },
+    PEnergy: { address: '0025', len: '0002' },
   },
   '05': {
     Relay: { address: '0001', Opcode: { 1: 'FF00', 0: '0000' } },
@@ -43,8 +43,8 @@ function rawDataToProtocol(rawData) {
   // 功能码是04
   if (rawData.slice(2, 4) === '04' || rawData.slice(2, 4) === '01') {
     // 第三项获取字节长度
-  // let returnLength = parseInt(rawData[2], 16);  //  字节长度，转换为十进制
-  // 提取第5位和第6位字符（注意索引从0开始）
+    // let returnLength = parseInt(rawData[2], 16);  //  字节长度，转换为十进制
+    // 提取第5位和第6位字符（注意索引从0开始）
     const fifthChar = rawData.charAt(4) // 第5位字符
     const sixthChar = rawData.charAt(5) // 第6位字符
 
@@ -75,8 +75,9 @@ function rawDataToProtocol(rawData) {
     let option = {}
     // 遍历 functionCode05 找到值为 address 的键
     for (const key in functionCode05) {
-      if (functionCode05[key].address === address)
+      if (functionCode05[key].address === address) { 
         option = functionCode05[key].Opcode
+      }
     }
     // 确认操作码对应的布尔值
     let opcodeKey
@@ -101,8 +102,7 @@ function protocolToRawData(jsonObj) {
 
   // 获取功能码对应的参数映射
   const functionParams = functionCodeMap[functionCode]
-  if (!functionParams)
-    throw new Error(`无法找到功能码 ${functionCode} 的参数映射`)
+  if (!functionParams) { throw new Error(`无法找到功能码 ${functionCode} 的参数映射`) }
 
   // 创建 rawData 数组，前两项为地址和功能码
   let rawData = [address, functionCode]
@@ -133,9 +133,6 @@ function protocolToRawData(jsonObj) {
     }
   }
 
-  // 第七项和第八项
-  const seventhItem = '00'
-  const egithItem = '00'
   // 前六项每一项添加0x
   const rawDataTemp = rawData.map(item => `0x${item}`)
   const data = new Uint8Array(rawDataTemp)
