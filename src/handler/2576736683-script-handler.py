@@ -1,3 +1,7 @@
+"""
+2576736683中长款485单相漏电器
+"""
+
 import json
 
 FUNCTION_CODE = {

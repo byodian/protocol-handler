@@ -1,5 +1,6 @@
-const js = require('@eslint/js')
-
+/**
+ * 2576736683中长款485单相漏电器
+ */
 const functionCodeMap = {
   '01': {
     Relay: { memoryAddr: '0001', len: '0001' },
