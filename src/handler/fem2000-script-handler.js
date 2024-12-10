@@ -1,3 +1,7 @@
+/**
+ * 流量计算脚本
+ */
+
 const DATA_TYPES = {
   UINT_16: {
     bytes: 2,
@@ -58,23 +62,25 @@ const DATA_TYPES = {
 }
 
 /**
+ * 请求帧配置
  * address 寄存器起始地址
  * dataLength: 寄存器的个数，每个寄存器可以存储两个字节长度的数据，高位在前，地位在后
  */
 const FUNCTION_CODE_MAP = {
   0x04: {
     FlowRate: { address: 0x1010, dataLength: 2, desc: '瞬时流量' },
-    FlowVelocity: { address: 0x1012, dataLength: 2, desc: '瞬时流速'  },
-    FlowRateUnit: { address: 0x1020, dataLength: 1, desc: '瞬时流量单位'  },
+    FlowVelocity: { address: 0x1012, dataLength: 2, desc: '瞬时流速' },
+    FlowRateUnit: { address: 0x1020, dataLength: 1, desc: '瞬时流量单位' },
     TotalFlowUnit: { address: 0x1021, dataLength: 1, desc: '累计流量单位' },
-    AlarmUpperLimit: { address: 0x1022, dataLength: 1, desc: '上限报警'  },
-    AlarmLowerLimit: { address: 0x1023, dataLength: 1, desc: '下限报警'  },
+    AlarmUpperLimit: { address: 0x1022, dataLength: 1, desc: '上限报警' },
+    AlarmLowerLimit: { address: 0x1023, dataLength: 1, desc: '下限报警' },
     AlarmEmptyPipe: { address: 0x1024, dataLength: 1, desc: '空管报警' },
     AlarmSystem: { address: 0x1025, dataLength: 1, desc: '系统报警' }, 
     TotalFlow: { address: 0x1018, dataLength: 4, desc: '正向累计流量' },
   },
 }
 
+// 响应帧数据类型
 const DATA_TYPE_MAP = {
   FlowRate: ['FLOAT_32'],
   FlowVelocity: ['FLOAT_32'],
@@ -93,10 +99,18 @@ const DATA_TYPE_MAP = {
  * 第一个字节：从机地址
  * 第二个字节：功能码
  * 第三个字节：数据长度
- * @param {string} frameHexString 十六进制 Modbus 报文帧
+ * @param {string} jsonString "{\"data\": \"frame\", \"identifier\": \"Ua\"}"" 
+ * @param {string} jsonString.data 报文帧
+ * @param {string} jsonString.identifier 物模型标识符
  * @returns 
  */
-function rawDataToProtocol(frameHexString, identifier) {
+function rawDataToProtocol(jsonString) {
+  const jsonData = JSON.parse(jsonString)
+  // 报文帧
+  const frameHexString = jsonData.data
+  // 标识符
+  const identifier = jsonData.identifier
+
   // 将十六进制字符串转换为 ArrayBuffer
   const buffer = hexStringToArrayBuffer(frameHexString)
         
@@ -115,8 +129,8 @@ function rawDataToProtocol(frameHexString, identifier) {
   }
 
   /**
-   * 报文帧第三个字节为数据长度
    * 解析 modbus RTU 帧数据
+   * 报文帧第三个字节为数据长度
    * @param {Uint8Array} frame 
    */
   function parsePropertyData(frame, identifier) {
@@ -153,11 +167,11 @@ function rawDataToProtocol(frameHexString, identifier) {
   return parser(frame, identifier)
 }
 
-// const jsonData = "{\"address\":\"1\",\"functionCode\":\"04\",\"params\":{\"Ua\":true}}"
+// const jsonData = "{\"address\":\"1\",\"functionCode\":\"04\",\"params\":{\"FlowRate\":true}}"
 
 /**
  * 创建 Modbus RTU 帧
- * @param {string} jsonString "{\"address\":\"1\",\"functionCode\":\"04\",\"params\":{\"Ua\":true}}"
+ * @param {string} jsonString "{\"address\":\"1\",\"functionCode\":\"04\",\"params\":{\"FlowRate\":true}}"
  */
 function protocolToRawData(jsonString) {
   const KEY_ADDRESS = 'address'
@@ -197,7 +211,7 @@ function protocolToRawData(jsonString) {
     const dataLength = identifierMap[identifier].dataLength
 
     // 从机地址+功能码+寄存器起始地址+数据长度+校验码
-    const dataHexStr = `${toHexString(slaveAddress)}${toHexString(functionCode)}${toHexString(registerStartAddress)}${toHexString(dataLength)}`
+    const dataHexStr = `${toHexString(slaveAddress)}${toHexString(functionCode)}${toHexString(registerStartAddress)}${toHexString(dataLength, 4)}`
     const buffer = hexStringToArrayBuffer(dataHexStr)
     const dataFrame = new Uint8Array(buffer)
     return dataHexStr + toHexString(calculateCRC16(dataFrame))
@@ -232,12 +246,12 @@ function hexStringToArrayBuffer(hexString) {
   return buffer
 }
 
-function toHexString(number) {
+function toHexString(number, maxLength = 2) {
   if (typeof number !== 'number') {
     throw new Error('非法数字')
   }
 
-  return number.toString(16).toUpperCase().padStart(2, '0')
+  return number.toString(16).toUpperCase().padStart(maxLength, '0')
 }
 
 /**
@@ -265,11 +279,20 @@ function calculateCRC16(buffer) {
 
 // 使用示例
 try {
-  const totalFlowHexString = '010408000070713F0000003B90'
-  console.log(rawDataToProtocol(totalFlowHexString, 'TotalFlow'))
+  console.log(rawDataToProtocol('{"data":"010408000070713F0000003B90","identifier":"TotalFlow"}'))
   
-  const flowRateHexString = '01 04 04 C4 1C 60 00 2F 72'
-  console.log(rawDataToProtocol(flowRateHexString, 'FlowRate'))
+  // 读瞬时流量 01041010000274CE
+  // 读瞬时流速 010410120002D50E
+  // const flowRateHexString = '01 04 04 C4 1C 60 00 2F 72'
+  console.log(rawDataToProtocol('{"data":"01 04 04 C4 1C 60 00 2F 72","identifier":"FlowRate"}'))
+  // "{\"data\":\"01 04 04 C4 1C 60 00 2F 72\",\"identifier\":\"FlowRate\"}"
+
+  // const alarmEmptyPipeHexString = '01 04 02 00 01 78 F0'
+  console.log(rawDataToProtocol('{"data":"01 04 02 00 01 78 F0","identifier":"AlarmEmptyPipe"}'))
+
+  // const flowRateUnitHexStr = '01 04 02 00 05 79 33'
+  // console.log(rawDataToProtocol(flowRateUnitHexStr, 'FlowRateUnit'))
+
   console.log(protocolToRawData('{"address":"1","functionCode":"04","params":{"FlowRate":true}}'))
 } catch (error) {
   console.error('解析错误:', error)

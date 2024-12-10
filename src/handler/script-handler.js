@@ -1,3 +1,5 @@
+const js = require('@eslint/js')
+
 const functionCodeMap = {
   '01': {
     Relay: { memoryAddr: '0001', len: '0001' },
@@ -39,7 +41,9 @@ const functionCodeMap = {
   },
 }
 
-function rawDataToProtocol(rawData) {
+function rawDataToProtocol(jsonString) {
+  const jsonData = JSON.parse(jsonString)
+  const rawData = jsonData.data
   // 功能码是04
   if (rawData.slice(2, 4) === '04' || rawData.slice(2, 4) === '01') {
     // 第三项获取字节长度

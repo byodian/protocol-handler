@@ -109,7 +109,10 @@ def protocol_to_raw_data(jsonData):
   else:
     raise Exception(f"function code {functionCode} is not supported")
 
-def raw_data_to_protocol(rawData):
+def raw_data_to_protocol(jsonString):
+  jsonData = json.loads(jsonString)
+  rawData = jsonData["data"]
+
   if type(rawData) is not str:
     raise Exception("raw_data_to_protocol function argument must be str")
 
