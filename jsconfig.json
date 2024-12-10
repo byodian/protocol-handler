@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@src/*": ["src/*"],
+      "@tests/*": ["tests/*"]
+    },
+  },
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["**/*.spec.ts"],
+}

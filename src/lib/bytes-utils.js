@@ -1,34 +1,47 @@
 /**
  * 数据类型，大端法计算方法
  */
-const DATA_TYPE_MAP = {
-  UINT16: {
+export const DATA_TYPES = {
+  UINT_8: {
+    bytes: 1,
+    parse: (bytes) => {
+      return bytes[0]
+    },
+  },
+  UINT_16: {
     bytes: 2,
     parse: (bytes) => {
       return (bytes[0] << 8) | bytes[1]
     },
   },
-  INT16: {
+  INT_16: {
     bytes: 2,
     parse: (bytes) => {
       const value = (bytes[0] << 8) | bytes[1]
       return value > 0x7FFF ? value - 0x10000 : value
     },
   },
-  UINT32: {
+  UINT_32: {
     bytes: 4,
     parse: (bytes) => {
       return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]
     },
   },
-  INT32: {
+  INT_32: {
     bytes: 4,
     parse: (bytes) => {
-      const value = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]
-      return value > 0x7FFFFFFF ? value - 0x100000000 : value
+      // const value = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]
+      // return value > 0x7FFFFFFF ? value - 0x100000000 : value
+      const buffer = new ArrayBuffer(4)
+      const view = new DataView(buffer)
+      view.setUint8(0, bytes[0])
+      view.setUint8(1, bytes[1])
+      view.setUint8(2, bytes[2])
+      view.setUint8(3, bytes[3])
+      return view.getInt32(0, false) // 大端模式
     },
   },
-  FLOAT32: {
+  FLOAT_32: {
     bytes: 4,
     parse: (bytes) => {
       const buffer = new ArrayBuffer(4)
@@ -40,7 +53,7 @@ const DATA_TYPE_MAP = {
       return view.getFloat32(0, false) // 大端模式
     },
   },
-  FLOAT64: {
+  FLOAT_64: {
     bytes: 8,
     parse: (bytes) => {
       const buffer = new ArrayBuffer(8)
@@ -51,6 +64,18 @@ const DATA_TYPE_MAP = {
       return view.getFloat64(0, false) // 大端模式
     },
   },
+  BCD: {
+    bytes: null, // BCD 长度不固定
+    parse: (bytes) => {
+      return bytes
+        .map((byte) => {
+          const high = (byte >> 4) & 0x0F // 高 4 位
+          const low = byte & 0x0F        // 低 4 位
+          return `${high}${low}`        // 拼接成字符串
+        })
+        .join('') // 合并所有字节
+    },
+  },
 }
 
 /**
@@ -58,7 +83,7 @@ const DATA_TYPE_MAP = {
  * @param {ArrayBuffer} buffer 
  * @returns string
  */
-function arrayBufferToHexString(buffer) {
+export function arrayBufferToHexString(buffer) {
   const view = new Uint8Array(buffer)
   return Array.from(view)
     .map(b => b.toString(16).padStart(2, '0'))
@@ -70,7 +95,7 @@ function arrayBufferToHexString(buffer) {
  * @param {string} hexString 
  * @returns ArrayBuffer
  */
-function hexStringToArrayBuffer(hexString) {
+export function hexStringToArrayBuffer(hexString) {
   // 移除可能的空格和 '0x' 前缀
   hexString = hexString.replace(/\s+|0x/g, '')
         
@@ -91,21 +116,21 @@ function hexStringToArrayBuffer(hexString) {
   return buffer
 }
 
-function toHexString(decimalValue) {
-  if (typeof decimalValue !== 'number') {
+export function toHexString(number, maxLength = 2) {
+  if (typeof number !== 'number') {
     throw new Error('非法数字')
   }
 
-  return decimalValue.toString(16).toUpperCase().padStart(2, '0')
+  return number.toString(16).toUpperCase().padStart(maxLength, '0')
 }
 
 /**
- * CRC16 校验计算方法
+ * CRC16 Modbus 校验计算方法
  * 字节顺序为大端法，高位在前，低位在后
  * @param {Uint8Array} buffer
  * @returns 
  */
-function calculateCRC16(buffer) {
+export function calculateCRC16(buffer) {
   let crc = 0xFFFF
   for (let i = 0; i < buffer.length; i++) {
     crc ^= buffer[i]
@@ -120,20 +145,4 @@ function calculateCRC16(buffer) {
 
   // Swap bytes
   return ((crc & 0xFF) << 8) | ((crc >> 8) & 0xFF)
-}
-
-// 使用示例
-try {
-  // 模拟接收的 Modbus RTU 帧（十六进制字符串）
-  const hexString = '010402000A3937'
-  const buffer = hexStringToArrayBuffer(hexString)
-  const frame = new Uint8Array(buffer)
-
-  // 校验 CRC
-  const calculatedCRC = calculateCRC16(frame.slice(0, -2))
-  console.log(frame.slice(0, -2))
-  console.log('校验解析结果:', toHexString(calculatedCRC))
-  console.log('解析结果', rawDataToProtocol(hexString))
-} catch (error) {
-  console.error('解析错误:', error)
 }
