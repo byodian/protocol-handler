@@ -50,6 +50,13 @@ OPERATION_CODE = {
  "0000": 0
 }
 
+METHOD = {
+  "post": "thing.event.property.post",
+  "get": "thing.service.property.get",
+  "set": "thing.service.property.set",
+  "action": "thing.service.${identifier}",
+}
+
 KEY_MEMORY_ADDR = "memoryAddr"
 KEY_DATA_LEN = "len"
 KEY_FUNCTION_CDODE = "functionCode"
@@ -116,6 +123,7 @@ def protocol_to_raw_data(jsonData):
 def raw_data_to_protocol(jsonString):
   jsonData = json.loads(jsonString)
   rawData = jsonData["data"]
+  identifier = jsonData["identifier"]
 
   if type(rawData) is not str:
     raise Exception("raw_data_to_protocol function argument must be str")
@@ -123,6 +131,13 @@ def raw_data_to_protocol(jsonString):
   bytes_result = bytes.fromhex(rawData)
   if len(bytes_result) < 6:
     raise Exception("raw data format invalid")
+ 
+
+  device_crc16 = rawData[-4:]
+  calculated_crc16 = swap_high_low_bytes(crc16_modbus(rawData[0:-4]))
+  if device_crc16 != calculated_crc16:
+    print(f"device_crc16: {device_crc16}, calculated_crc16: {calculated_crc16}")
+    raise Exception("CRC检验失败")
   
   index = 1
   functionCode = bytes_result[index]
@@ -133,13 +148,23 @@ def raw_data_to_protocol(jsonString):
     dataLen = bytes_result[index]
     startIndex = index + 1
     endIndex = startIndex + dataLen
-    data = int.from_bytes(bytes_result[startIndex:endIndex], byteorder = "big", signed = False)
-    return data
+    data = int.from_bytes(bytes_result[startIndex:endIndex], byteorder = "big", signed = False) 
+
+    return {
+      "data": data,
+      "method": METHOD["get"],
+      "identifier": identifier
+    }
   elif functionCodeHexStr == "05":
     startIndex = 4
     endIndex = 6
     key = bytes_to_hex_str(bytes_result[startIndex:endIndex])
-    return OPERATION_CODE[key]
+     
+    return {
+      "data": OPERATION_CODE[key],
+      "method": METHOD["action"].replace("${identifier}", identifier),
+      "identifier": identifier
+    }
   else:
     raise Exception(f"function code {functionCodeHexStr} is not supported")
 
@@ -168,3 +193,6 @@ def swap_high_low_bytes(hex_value):
 
 def bytes_to_hex_str(bytes):
   return ''.join(["%02X" % b for b in bytes])
+
+# print(raw_data_to_protocol('{"data":"01040200FE38B0","identifier":"Ua"}'))
+# print(raw_data_to_protocol('{"data":"01040200FE38B1","identifier":"Ua"}'))

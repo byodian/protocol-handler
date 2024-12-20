@@ -93,26 +93,47 @@ const DATA_TYPE_MAP = {
   TotalFlow: ['UINT_32', 'FLOAT_32'],
 }
 
+const METHOD = {
+  post: 'thing.event.property.post',
+  get: 'thing.service.property.get',
+  set: 'thing.service.property.set',
+  action: 'thing.service.{identifier}',
+}
+
 /**
  * 解析 Modbus RTU 帧
  * Modbus RTU 报文字节含义：
  * 第一个字节：从机地址
  * 第二个字节：功能码
  * 第三个字节：数据长度
- * @param {string} jsonString "{\"data\": \"frame\", \"identifier\": \"Ua\"}"" 
+ * 模拟执行输入参数 {"data":"010408000070713F0000005F22","identifier":"TotalFlow"}
+ * @param {string} jsonString "{\"data\": \"010408000070713F0000005F22\", \"identifier\": \"TotalFlow\"}"
  * @param {string} jsonString.data 报文帧
  * @param {string} jsonString.identifier 物模型标识符
- * @returns 
+ * @returns {object} result
+ * @returns {string} result.data 物模型属性值
+ * @returns {string} result.identifier 物模型标识符
+ * @returns {string} result.method 物模型方法 
+ * thing.event.property.post (主动上报) | thing.service.property.get (属性获取) | thing.service.property.set (属性设置) | thing.service.${identifier} (动作调用)
  */
 function rawDataToProtocol(jsonString) {
   const jsonData = JSON.parse(jsonString)
+
   // 报文帧
-  const frameHexString = jsonData.data
+  const rawDataHexStr = jsonData.data.replace(/\s+|^0x/g, '')
+
+  // 校验CRC
+  const deviceCRC = rawDataHexStr.slice(-4)
+  const calculatedCRC = checkCRC16(rawDataHexStr.slice(0, -4))
+  if (deviceCRC !== calculatedCRC) {
+    throw new Error('CRC校验失败')
+  }
+
   // 标识符
   const identifier = jsonData.identifier
 
   // 将十六进制字符串转换为 ArrayBuffer
-  const buffer = hexStringToArrayBuffer(frameHexString)
+  const buffer = hexStringToArrayBuffer(rawDataHexStr)
         
   // 创建 Uint8Array 视图
   const frame = new Uint8Array(buffer)
@@ -123,55 +144,28 @@ function rawDataToProtocol(jsonString) {
   }
 
   const parseFrame = {
-    0x01: parsePropertyData,
     0x04: parsePropertyData,
     0x05: () => 0,
   }
 
-  /**
-   * 解析 modbus RTU 帧数据
-   * 报文帧第三个字节为数据长度
-   * @param {Uint8Array} frame 
-   */
-  function parsePropertyData(frame, identifier) {
-    if (!Object.keys(DATA_TYPE_MAP).includes(identifier)) {
-      throw new Error(`不支持的标识符：${identifier}`)
-    }
-
-    // 获取属性的数据类型
-    const dataTypes = DATA_TYPE_MAP[identifier]
-
-    // 数据部分
-    const dataLength = frame[2]
-    const dataStartIndex = 3
-    const dataEndIndex = dataStartIndex + dataLength
-    const dataBytes = frame.slice(dataStartIndex, dataEndIndex)
-
-    const result = []
-    let index = 0
-    for (const dataType of dataTypes) {
-      const byteLength = DATA_TYPES[dataType].bytes
-      const frame = dataBytes.slice(index, index + byteLength)
-
-      const parser = DATA_TYPES[dataType].parse
-      result.push(parser(frame))
-
-      index = index + byteLength
-    }
-    
-    return result.reduce((acc, cur) => acc + cur, 0)
-  }
-
   // 报文帧第二个字节为功能码
   const parser = parseFrame[frame[1]]
-  return parser(frame, identifier)
+  const data = parser(frame, identifier)
+  return {
+    ...data,
+    identifier,
+  }
 }
-
-// const jsonData = "{\"address\":\"1\",\"functionCode\":\"04\",\"params\":{\"FlowRate\":true}}"
 
 /**
  * 创建 Modbus RTU 帧
- * @param {string} jsonString "{\"address\":\"1\",\"functionCode\":\"04\",\"params\":{\"FlowRate\":true}}"
+ * 模拟执行输入参数 {"address":"1","functionCode":"0x04","params":{"FlowRate":true}}
+ * @param {string} jsonString "{\"address\":\"1\",\"functionCode\":\"0x04\",\"params\":{\"FlowRate\":true}}"
+ * @param {string} jsonString.address 从机地址
+ * @param {string} jsonString.functionCode 功能码
+ * @param {object} jsonString.params 标识符 key-value 对
+ * @param {string} jsonString.deviceName 设备名称
+ * @returns {string} rawdata 设备能识别的格式数据
  */
 function protocolToRawData(jsonString) {
   const KEY_ADDRESS = 'address'
@@ -214,7 +208,7 @@ function protocolToRawData(jsonString) {
     const dataHexStr = `${toHexString(slaveAddress)}${toHexString(functionCode)}${toHexString(registerStartAddress)}${toHexString(dataLength, 4)}`
     const buffer = hexStringToArrayBuffer(dataHexStr)
     const dataFrame = new Uint8Array(buffer)
-    return dataHexStr + toHexString(calculateCRC16(dataFrame))
+    return dataHexStr + toHexString(calculateCRC16(dataFrame), 4)
   } else {
     throw new Error(`不支持的功能码：${functionCode}`)
   }
@@ -225,7 +219,7 @@ function protocolToRawData(jsonString) {
  * @param {string} hexString 
  * @returns ArrayBuffer
  */
-function hexStringToArrayBuffer(hexString) {
+function hexStringToArrayBuffer(hexString, radix = 16) {
   // 移除可能的空格和 '0x' 前缀
   hexString = hexString.replace(/\s+|0x/g, '')
         
@@ -240,7 +234,7 @@ function hexStringToArrayBuffer(hexString) {
         
   // 转换十六进制字符串
   for (let i = 0; i < hexString.length; i += 2) {
-    view[i / 2] = parseInt(hexString.slice(i, i + 2), 16)
+    view[i / 2] = parseInt(hexString.slice(i, i + 2), radix)
   }
         
   return buffer
@@ -252,6 +246,49 @@ function toHexString(number, maxLength = 2) {
   }
 
   return number.toString(16).toUpperCase().padStart(maxLength, '0')
+}
+
+/**
+   * 解析 modbus RTU 帧数据
+   * 报文帧第三个字节为数据长度
+   * @param {Uint8Array} frame 
+   * @returns {object} result
+   * @returns {string} result.data 物模型属性值
+   * @returns {string} result.method 物模型方法
+   * thing.event.property.post (主动上报) | thing.service.property.get (属性获取) | thing.service.property.set (属性设置) | thing.service.${identifier} (动作调用)
+   */
+function parsePropertyData(frame, identifier) {
+  if (!Object.keys(DATA_TYPE_MAP).includes(identifier)) {
+    throw new Error(`不支持的标识符：${identifier}`)
+  }
+
+  // 获取属性的数据类型
+  const dataTypes = DATA_TYPE_MAP[identifier]
+
+  // 数据部分
+  const dataLength = frame[2]
+  const dataStartIndex = 3
+  const dataEndIndex = dataStartIndex + dataLength
+  const dataBytes = frame.slice(dataStartIndex, dataEndIndex)
+
+  const result = []
+  let index = 0
+  for (const dataType of dataTypes) {
+    const byteLength = DATA_TYPES[dataType].bytes
+    const frame = dataBytes.slice(index, index + byteLength)
+
+    const parser = DATA_TYPES[dataType].parse
+    result.push(parser(frame))
+
+    index = index + byteLength
+  }
+    
+  const data = result.reduce((acc, cur) => acc + cur, 0)
+
+  return {
+    data,
+    method: METHOD.get,
+  }
 }
 
 /**
@@ -277,23 +314,19 @@ function calculateCRC16(buffer) {
   return ((crc & 0xFF) << 8) | ((crc >> 8) & 0xFF)
 }
 
-// 使用示例
-try {
-  console.log(rawDataToProtocol('{"data":"010408000070713F0000003B90","identifier":"TotalFlow"}'))
-  
-  // 读瞬时流量 01041010000274CE
-  // 读瞬时流速 010410120002D50E
-  // const flowRateHexString = '01 04 04 C4 1C 60 00 2F 72'
-  console.log(rawDataToProtocol('{"data":"01 04 04 C4 1C 60 00 2F 72","identifier":"FlowRate"}'))
-  // "{\"data\":\"01 04 04 C4 1C 60 00 2F 72\",\"identifier\":\"FlowRate\"}"
+/**
+ * CRC16 校验
+ * @param {string} dataHexStr 
+ * @returns 
+ */
+function checkCRC16(dataHexStr) {
+  const buffer = hexStringToArrayBuffer(dataHexStr)
+  const dataFrame = new Uint8Array(buffer)
 
-  // const alarmEmptyPipeHexString = '01 04 02 00 01 78 F0'
-  console.log(rawDataToProtocol('{"data":"01 04 02 00 01 78 F0","identifier":"AlarmEmptyPipe"}'))
+  return toHexString(calculateCRC16(dataFrame), 4)
+}
 
-  // const flowRateUnitHexStr = '01 04 02 00 05 79 33'
-  // console.log(rawDataToProtocol(flowRateUnitHexStr, 'FlowRateUnit'))
-
-  console.log(protocolToRawData('{"address":"1","functionCode":"04","params":{"FlowRate":true}}'))
-} catch (error) {
-  console.error('解析错误:', error)
+export {
+  protocolToRawData,
+  rawDataToProtocol,
 }

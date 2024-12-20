@@ -67,12 +67,16 @@ export const DATA_TYPES = {
   BCD: {
     bytes: null, // BCD 长度不固定
     parse: (bytes) => {
-      return bytes
+      // @param {numbers} Uint8Array
+      const numbers = bytes
         .map((byte) => {
           const high = (byte >> 4) & 0x0F // 高 4 位
           const low = byte & 0x0F        // 低 4 位
           return `${high}${low}`        // 拼接成字符串
         })
+
+      return Array.from(numbers)
+        .map(n => n.toString().padStart(2, '0')) 
         .join('') // 合并所有字节
     },
   },
@@ -95,7 +99,7 @@ export function arrayBufferToHexString(buffer) {
  * @param {string} hexString 
  * @returns ArrayBuffer
  */
-export function hexStringToArrayBuffer(hexString) {
+export function hexStringToArrayBuffer(hexString, radix = 16) {
   // 移除可能的空格和 '0x' 前缀
   hexString = hexString.replace(/\s+|0x/g, '')
         
@@ -110,7 +114,7 @@ export function hexStringToArrayBuffer(hexString) {
         
   // 转换十六进制字符串
   for (let i = 0; i < hexString.length; i += 2) {
-    view[i / 2] = parseInt(hexString.slice(i, i + 2), 16)
+    view[i / 2] = parseInt(hexString.slice(i, i + 2), radix)
   }
         
   return buffer
@@ -145,4 +149,23 @@ export function calculateCRC16(buffer) {
 
   // Swap bytes
   return ((crc & 0xFF) << 8) | ((crc >> 8) & 0xFF)
+}
+
+/**
+ * CRC16 校验
+ * @param {string} dataHexStr 
+ * @returns 
+ */
+export function checkCRC16(dataHexStr) {
+  const buffer = hexStringToArrayBuffer(dataHexStr)
+  const dataFrame = new Uint8Array(buffer)
+
+  return toHexString(calculateCRC16(dataFrame), 4)
+}
+
+export function swapHexByteOrder(hexStr) {
+  const buffer = hexStringToArrayBuffer(hexStr)
+  // 创建 Uint8Array 视图
+  const frame = new Uint8Array(buffer)
+  return Array.from(frame).reverse().map(byte => toHexString(byte)).join('')
 }

@@ -12,7 +12,7 @@ beforeAll(() => {
     console.log('down: Relay 02', protocolToRawData('{"address":"254","functionCode": "0x10","params":{"Relay": 2 }}'))
     console.log('down: Time', protocolToRawData('{"address":"254","functionCode": "0x10","params":{"Time": 1733741865507 }}'))
     console.log('down: DayWaterCFV', protocolToRawData('{"address":"254","functionCode": "0x03","params":{"DayWaterCFV": true }}'))
-    console.log('down: braud', protocolToRawData('{"address":"254","functionCode": "0x10","params":{"braud": 32 }}'))
+    console.log('down: WaterCFV', protocolToRawData('{"address":"254","functionCode": "0x03","params":{"WaterCFV": true }}'))
 
     // const dayWaterCFV1 = '00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00'
     // const waterCFV1Buffer = hexStringToArrayBuffer(dayWaterCFV1)
@@ -26,9 +26,9 @@ beforeAll(() => {
  
     console.log('Version', rawDataToProtocol('{"data":"FE 03 04 22 94 01 19 7E F2","identifier":"Version"}'))
     console.log('Temp', rawDataToProtocol('{"data":"FE 03 02 07 4D 6E 55","identifier":"Temp"}'))
-    console.log('WaterCFV', rawDataToProtocol('{"data":"FE 03 04 00 00 29 46 F5 3C","identifier":"WaterCFV"}'))
+    console.log('WaterCFV', rawDataToProtocol('{"data":"FE 03 04 00 00 29 46 6B 5E","identifier":"WaterCFV"}'))
     console.log('Time', rawDataToProtocol('{"data":"FE 03 08 14 18 0C 01 09 0F 03 2F 71 81","identifier":"Time"}'))
-    console.log('DayWaterCFV', rawDataToProtocol('{"data":"FE 03 70 00 00 29 46 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 29 46 FE 03","identifier":"DayWaterCFV"}'))
+    console.log('DayWaterCFV', rawDataToProtocol('{"data":"FE 03 70 00 00 29 46 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 29 46 23 CE","identifier":"DayWaterCFV"}'))
     console.log('Relay', rawDataToProtocol('{"data":"53 10 9C 6A 00 01 02 37","identifier":"Relay"}'))
     console.log('Time', rawDataToProtocol('{"data":"53 10 A4 10 00 04 EE 8D","identifier":"Time"}'))
 
@@ -74,6 +74,6 @@ describe('rawDataToProtocol 设备到云，数据解析', () => {
 
     const framJsonString = '{"data":"FE 03 08 14 18 0C 01 09 0F 03 2F 71 81","identifier":"Time"}'
     const result = rawDataToProtocol(framJsonString)
-    expect(result).toBe(curDate.getTime().toString())
+    expect(result.data).toBe(curDate.getTime().toString())
   })
 })
