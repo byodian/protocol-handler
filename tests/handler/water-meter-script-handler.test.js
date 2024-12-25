@@ -31,7 +31,6 @@ beforeAll(() => {
     console.log('DayWaterCFV', rawDataToProtocol('{"data":"FE 03 70 00 00 29 46 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 29 46 23 CE","identifier":"DayWaterCFV"}'))
     console.log('Relay', rawDataToProtocol('{"data":"53 10 9C 6A 00 01 02 37","identifier":"Relay"}'))
     console.log('Time', rawDataToProtocol('{"data":"53 10 A4 10 00 04 EE 8D","identifier":"Time"}'))
-
   } catch (error) {
     console.error('解析错误:', error)
   }

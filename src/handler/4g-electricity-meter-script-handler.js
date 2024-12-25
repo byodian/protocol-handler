@@ -156,10 +156,10 @@ const DATA_TYPE_MAP = {
   Pc: { dataType: 'UINT_32', decimalDigits: 2 },
   P: { dataType: 'UINT_32', decimalDigits: 2 },
 
-  Qa: { dataType: 'UINT_32', decimalDigits: 2 },
-  Qb: { dataType: 'UINT_32', decimalDigits: 2 },
-  Qc: { dataType: 'UINT_32', decimalDigits: 2 },
-  Q: { dataType: 'UINT_32', decimalDigits: 2 },
+  Qa: { dataType: 'INT_32', decimalDigits: 2 },
+  Qb: { dataType: 'INT_32', decimalDigits: 2 },
+  Qc: { dataType: 'INT_32', decimalDigits: 2 },
+  Q: { dataType: 'INT_32', decimalDigits: 2 },
 
   Temp: { dataType: 'UINT_16', decimalDigits: 2 },
   Version: { dataType: 'BCD', decimalDigits: null },
@@ -203,6 +203,7 @@ function rawDataToProtocol(jsonString) {
     const deviceCRC = frameHexString.slice(-4)
     const calculatedCRC = checkCRC16(frameHexString.slice(0, -4))
     if (deviceCRC !== calculatedCRC) {
+      console.log(deviceCRC, calculatedCRC)
       throw new Error('CRC校验失败')
     }
 

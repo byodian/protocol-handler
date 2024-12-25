@@ -11,8 +11,10 @@ const METHOD = {
 }
 
 /**
+ * 设备到云消息解析
  * 将设备的自定义格式数据转换为标准协议的数据，设备上报数据到物联网平台时调用
- * @param {string} jsonString "{\"data\": \"frame\", \"identifier\": \"Ua\"}"" 
+ * 模拟执行输入参数示例 {"data":"FE0304229401197EF2","identifier":"Version"}
+ * @param {string} jsonString "{\"data\": \"FE0304229401197EF2\", \"identifier\": \"Version\"}"
  * @param {string} jsonString.data 报文帧
  * @param {string} jsonString.identifier 物模型标识符
  * @returns {object} result
@@ -27,7 +29,9 @@ function rawDataToProtocol(jsonString) {
 }
 
 /**
+ * 云到设备消息解析
  * 将标准协议的数据转换为设备能识别的格式数据，物联网平台给设备下发数据时调用
+ * 模拟执行输入参数，示例 {"address":"1","functionCode":"0x04","params":{"FlowRate":true}, "deviceName": "123456789012"}
  * @param {string} jsonString "{\"address\":\"1\",\"functionCode\":\"0x04\",\"params\":{\"FlowRate\":true}, \"deviceName\":\"123456789012\"}"
  * @param {string} jsonString.address 从机地址
  * @param {string} jsonString.functionCode 功能码

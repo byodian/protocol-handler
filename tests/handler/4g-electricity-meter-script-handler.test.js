@@ -26,6 +26,8 @@ beforeAll(() => {
     console.log('Up: Temp', rawDataToProtocol('{"data":"HD45:AA 03 02 07 4D 5F 99","identifier":"Temp"}'))
     console.log('Up: PEnergy', rawDataToProtocol('{"data":"HD45:AA0304003335B287D3","identifier":"PEnergy"}'))
     console.log('Up: Time', rawDataToProtocol('{"data":"HD45:FE030814180C01090F032F7181","identifier":"Time"}'))
+    console.log('Up: Qa', rawDataToProtocol('{"data":"HD45:FE0304FFFFFFFFF4A8","identifier":"Qa"}'))
+    console.log('Up: Qb', rawDataToProtocol('{"data":"HD45:AA03048000000108F9","identifier":"Qb"}'))
 
   } catch (error) {
     console.error('解析错误:', error)

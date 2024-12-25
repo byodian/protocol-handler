@@ -153,7 +153,6 @@ function rawDataToProtocol(jsonString) {
   const deviceCRC = rawDataHexStr.slice(-4)
   const calculatedCRC = checkCRC16(rawDataHexStr.slice(0, -4))
   if (deviceCRC !== calculatedCRC) {
-    console.log(deviceCRC, calculatedCRC)
     throw new Error('CRC校验失败')
   }
   
@@ -344,7 +343,8 @@ function parsePropertyData(frame, identifier) {
     case 'Temp':
     case 'WaterCFV': {
       const result = parser(dataBytes)
-      return result / 100
+      data = result / 100
+      break
     }
     case 'Relay':
     case 'Version': 
