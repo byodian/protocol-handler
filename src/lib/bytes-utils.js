@@ -169,3 +169,21 @@ export function swapHexByteOrder(hexStr) {
   const frame = new Uint8Array(buffer)
   return Array.from(frame).reverse().map(byte => toHexString(byte)).join('')
 }
+
+/**
+ * 将二进制数据转换为 base64 字符串 
+ * @param {Uint8Array} param 
+ * @returns string
+ */
+export function base64Encode(param) {
+  return Buffer.from(param).toString('base64')
+}
+
+/**
+ * 将 base64 字符串解码为二进制数据
+ * @param {string} param
+ * @returns Buffer
+ */
+export function base64Decode(param) {
+  return Buffer.from(param, 'base64')
+}

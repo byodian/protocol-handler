@@ -1,6 +1,9 @@
 /**
  * 4G电表脚本
+ * v1 2024-12-30 17:15
+ * v2 2025-01-16 10:35 数据增加校验
  */
+
 const DATA_TYPES = {
   UINT_8: {
     bytes: 1,
@@ -88,46 +91,44 @@ const DATA_TYPES = {
  * dataLength: 寄存器的个数，每个寄存器可以存储两个字节长度的数据，高位在前，地位在后
  */
 const FUNCTION_CODE_MAP = {
-  // 读取属性
-  0x04: {
+  // 属性抄读
+  get: {
+    Ua: { address: 0x9C40, dataLength: 1, functionCode: 0x03, desc: 'A相电压' },
+    Ub: { address: 0x9C41, dataLength: 1, functionCode: 0x03, desc: 'B相电压' },
+    Uc: { address: 0x9C42, dataLength: 1, functionCode: 0x03, desc: 'C相电压' },
+    Ia: { address: 0x9C43, dataLength: 2, functionCode: 0x03, desc: 'A相电流' },
+    Ib: { address: 0x9C45, dataLength: 2, functionCode: 0x03, desc: 'B相电流' },
+    Ic: { address: 0x9C47, dataLength: 2, functionCode: 0x03, desc: 'C相电流' },
+    GridFreq: { address: 0x9C49, dataLength: 1, functionCode: 0x03, desc: '频率' },
+    PF: { address: 0x9C4A, dataLength: 1, functionCode: 0x03, desc: '总频率因数' },
+    S: { address: 0x9C4B, dataLength: 2, functionCode: 0x03, desc: '总视在功率' },
+    PEnergy: { address: 0x9C4D, dataLength: 2, functionCode: 0x03, desc: '总有功电度' },
+
+    Pa: { address: 0x9C51, dataLength: 2, functionCode: 0x03, desc: 'A相有功功率' },
+    Pb: { address: 0x9C53, dataLength: 2, functionCode: 0x03, desc: 'B相有功功率' },
+    Pc: { address: 0x9C55, dataLength: 2, functionCode: 0x03, desc: 'C相有功功率' },
+    P: { address: 0x9C57, dataLength: 2, functionCode: 0x03, desc: '总有功功率' },
+
+    Qa: { address: 0x9C59, dataLength: 2, functionCode: 0x03, desc: 'A相无功功率' },
+    Qb: { address: 0x9C5B, dataLength: 2, functionCode: 0x03, desc: 'B相无功功率' },
+    Qc: { address: 0x9C5D, dataLength: 2, functionCode: 0x03, desc: 'C相无功功率' },
+    Q: { address: 0x9C5F, dataLength: 2, functionCode: 0x03, desc: '总无功功率' },
+
+    FPEnergy1: { address: 0x9C61, dataLength: 2, functionCode: 0x03, desc: '尖总有功电度' },
+    FPEnergy2: { address: 0x9C63, dataLength: 2, functionCode: 0x03, desc: '峰总有功电度' },
+    FPEnergy3: { address: 0x9C65, dataLength: 2, functionCode: 0x03, desc: '平总有功电度' },
+    FPEnergy4: { address: 0x9C67, dataLength: 2, functionCode: 0x03, desc: '谷总有功电度' },
+
+    Temp: { address: 0x9C69, dataLength: 1, functionCode: 0x03, desc: '表内温度' },
+    Version: { address: 0x9DA0, dataLength: 2, functionCode: 0x03, desc: '版本号' },
+    Time: { address: 0xA410, dataLength: 4, functionCode: 0x03, desc: '电表时间' },
   },
-  0x03: {
-    Ua: { address: 0x9C40, dataLength: 1, desc: 'A相电压' },
-    Ub: { address: 0x9C41, dataLength: 1, desc: 'B相电压' },
-    Uc: { address: 0x9C42, dataLength: 1, desc: 'C相电压' },
-    Ia: { address: 0x9C43, dataLength: 2, desc: 'A相电流' },
-    Ib: { address: 0x9C45, dataLength: 2, desc: 'B相电流' },
-    Ic: { address: 0x9C47, dataLength: 2, desc: 'C相电流' },
-    GridFreq: { address: 0x9C49, dataLength: 1, desc: '频率' },
-    PF: { address: 0x9C4A, dataLength: 1, desc: '总频率因数' },
-    S: { address: 0x9C4B, dataLength: 2, desc: '总视在功率' },
-    PEnergy: { address: 0x9C4D, dataLength: 2, desc: '总有功电度' },
-
-    Pa: { address: 0x9C51, dataLength: 2, desc: 'A相有功功率' },
-    Pb: { address: 0x9C53, dataLength: 2, desc: 'B相有功功率' },
-    Pc: { address: 0x9C55, dataLength: 2, desc: 'C相有功功率' },
-    P: { address: 0x9C57, dataLength: 2, desc: '总有功功率' },
-
-    Qa: { address: 0x9C59, dataLength: 2, desc: 'A相无功功率' },
-    Qb: { address: 0x9C5B, dataLength: 2, desc: 'B相无功功率' },
-    Qc: { address: 0x9C5D, dataLength: 2, desc: 'C相无功功率' },
-    Q: { address: 0x9C5F, dataLength: 2, desc: '总无功功率' },
-
-    FPEnergy1: { address: 0x9C61, dataLength: 2, desc: '尖总有功电度' },
-    FPEnergy2: { address: 0x9C63, dataLength: 2, desc: '峰总有功电度' },
-    FPEnergy3: { address: 0x9C65, dataLength: 2, desc: '平总有功电度' },
-    FPEnergy4: { address: 0x9C67, dataLength: 2, desc: '谷总有功电度' },
-
-    Temp: { address: 0x9C69, dataLength: 1, desc: '表内温度' },
-    Version: { address: 0x9DA0, dataLength: 2, desc: '版本号' },
-    Time: { address: 0xA410, dataLength: 4, desc: '电表时间' },
+  // 属性设置
+  set: {
+    Time: { address: 0xA410, dataLength: 4, byteLength: 8, functionCode: 0x10, desc: '电表校时' },
   },
-  // 写数据
-  0x05: {
-  },
-  // 写数据
-  0x10: {
-    Time: { address: 0xA410, dataLength: 4, byteLength: 8, desc: '电表校时' },
+  // 动作调用
+  action: {
   },
 }
 
@@ -189,13 +190,51 @@ const METHOD = {
  * @returns {string} result.method 物模型方法 
  * @returns 
  */
+
+/**
+ * 设备到云消息解析
+ * 模拟执行输入参数
+ * 1. Ua
+ * {"inputConfig":{"identifier":"Ua"},"result":{"data":"HD45:AA030255F16348"}}
+ * @param {string} jsonString '{"inputConfig":{"deviceName":"","port":1,"address":1,"identifier":""},"result":{"data":"","deviceName":""}}'
+ * @param {string} jsonString.inputConfig 输入参数元配置(设备名称、端口号、从机地址、物模型标识符)
+ * @param {string} jsonString.result 设备返回的数据(16进制报文、端口号、设备名改)
+ * @param {string} jsonString.identifier 物模型标识符
+ * @returns {object} result
+ * @returns {string} result.data 物模型属性值
+ * @returns {string} result.identifier 物模型标识符
+ * @returns {string} result.method 物模型方法 
+ * thing.event.property.post (主动上报) | thing.service.property.get (属性获取) | thing.service.property.set (属性设置) | thing.service.${identifier} (动作调用)
+ */
 function rawDataToProtocol(jsonString) {
+  const KEY_RESULT = 'result'
+  const KEY_INPUT_CONFIG = 'inputConfig'
   const jsonData = JSON.parse(jsonString)
-  const rawDataHexStr = jsonData.data.replace(/\s+|^0x/g, '')
+  const dataKeys = Object.keys(jsonData)
+  if (!dataKeys.includes(KEY_RESULT) || !dataKeys.includes(KEY_INPUT_CONFIG)) {
+    throw new Error('入参缺少 inputConfig 或 result 字段')
+  }
+
+  const result = jsonData.result
+  const resultKeys = Object.keys(result)
+  const KEY_DATA = 'data'
+  if (!resultKeys.includes(KEY_DATA)) {
+    throw new Error('入参 result 缺少 data 字段')
+  }
+
+  // 报文帧
+  const rawDataHexStr = result.data.replace(/\s+|^0x/g, '')
   const framePrefix = rawDataHexStr.slice(0, 5)
   // 抄读数据回复报文前缀 "HD45:"
   // 设备主动上报报文前缀 "HDLB:"
   if (framePrefix === 'HD45:') {
+    const KEY_IDENTIFIER = 'identifier'
+    const inputConfig  = jsonData.inputConfig
+    const inputConfigKeys = Object.keys(inputConfig)
+    if (!inputConfigKeys.includes(KEY_IDENTIFIER)) {
+      throw new Error('入参 inputConfig 缺少 identifier 字段')
+    }
+
     // 报文帧
     const frameHexString = rawDataHexStr.slice(5)
 
@@ -208,7 +247,7 @@ function rawDataToProtocol(jsonString) {
     }
 
     // 标识符
-    const identifier = jsonData.identifier
+    const identifier = inputConfig.identifier
     // 将十六进制字符串转换为 ArrayBuffer
     const buffer = hexStringToArrayBuffer(frameHexString)
         
@@ -233,6 +272,11 @@ function rawDataToProtocol(jsonString) {
       identifier,
     }
   } else if (framePrefix === 'HDLB:') { 
+    const KEY_DEVICE_NAME = 'deviceName'
+    if (!resultKeys.includes(KEY_DEVICE_NAME)) {
+      throw new Error('入参 result 缺少 deviceName 字段')
+    }
+
     // 报文帧
     const frameHexString = rawDataHexStr.slice(5)
 
@@ -246,6 +290,16 @@ function rawDataToProtocol(jsonString) {
 
     // const dataLengthFrame = frameHexString.slice(1, 5)
     // const dataLength = parseInt(dataLengthFrame.slice(1), 16)
+
+    // 将topic中的设备名称与报文中解析的设备名称进行比较，不一致时抛出异常
+    const deviceIdFromTopic = result.deviceName
+    const deviceIdHexStringFromFrame = frameHexString.slice(10, 18)
+    const highByte = swapHexByteOrder(deviceIdHexStringFromFrame.slice(4, 8))
+    const lowByte = swapHexByteOrder(deviceIdHexStringFromFrame.slice(0, 4))
+    const deviceIdFromFrame = toDecString(highByte, 6) + toDecString(lowByte, 6) 
+    if (deviceIdFromFrame !== deviceIdFromTopic) {
+      throw new Error('设备ID不一致')
+    }
 
     // 时间
     const tFrameHex = frameHexString.slice(24, 38)
@@ -445,64 +499,85 @@ function rawDataToProtocol(jsonString) {
 }
 
 /**
- * 创建 Modbus RTU 帧
- * 模拟执行输入参数 {"address":"1","functionCode": "0x03","params":{"Ua": true }}
- * @param {string} jsonString "{\"address\":\"1\",\"functionCode\":\"04\",\"params\":{\"FlowRate\":true}}"
- * @param {string} jsonString.address 从机地址
- * @param {string} jsonString.functionCode 功能码
- * @param {object} jsonString.params 标识符 key-value 对
+ * 云到设备消息解析
+ * 模拟执行输入参数 
+ * 1. 抄读数据
+ * {"type":"get","params":{"identifier":"Time"}}
+ * 2. 属性设置
+ * {"type":"set","params":{"identifier":"Time","inputData":{"Time":1736478033533}}}
+ * @param {string} jsonString "{\"type\":\"get\",\"params\":{\"identifier\":Time}}"
+ * @param {string} jsonString.type 指令类型 get(属性抄读)/set(属性设置)/action(动作调用)
+ * @param {object} jsonString.params key-value 键值对
+ * @param {object} jsonString.params.identifier 标识符
+ * @param {object} jsonString.params.inputData 输入参数(属性设置和动作调用类型使用)
  * @param {string} jsonString.deviceName 设备名称
  * @returns {string} rawdata 设备能识别的格式数据
  */
 function protocolToRawData(jsonString) {
-  const KEY_FUNCTIOIN_CODE = 'functionCode'
   const KEY_PARAMS = 'params'
+  const KEY_TYPE = 'type'
   const jsonData = JSON.parse(jsonString)
-  if (!Object.keys(jsonData).includes(KEY_FUNCTIOIN_CODE) || !Object.keys(jsonData).includes(KEY_PARAMS)) {
-    throw new Error('请求参数异常')
+  if (!Object.keys(jsonData).includes(KEY_TYPE) || !Object.keys(jsonData).includes(KEY_PARAMS)) {
+    throw new Error('入参缺少 params 或 type 字段')
   }
 
-  const functionCode = parseInt(jsonData[KEY_FUNCTIOIN_CODE])
-
-  // 从机地址
-  const slaveAddress = 'AA'
+  const type = jsonData[KEY_TYPE]
+  if (!Object.keys(FUNCTION_CODE_MAP).includes(type)) {
+    throw new Error(`指令类型 ${type} 不支持，支持的指令类型有：get、set 和 action`)
+  }
 
   const params = jsonData[KEY_PARAMS]
   const paramKeys = Object.keys(params)
-  if (Object.keys(params).length !== 1) {
-    throw new Error('请求参数异常')
+  const KEY_IDENTIFIER = 'identifier'
+  if (!paramKeys.includes(KEY_IDENTIFIER)) {
+    throw new Error('入参 params 中缺少标识符 identifier 字段')
   }
 
-  const identifier = paramKeys[0]
-
-  // 功能码 map
-  const singleFunctionCodeMap = FUNCTION_CODE_MAP[functionCode]
-
-  if (!Object.keys(singleFunctionCodeMap).includes(identifier)) {
+  // 传入的标识符
+  const identifierMap = FUNCTION_CODE_MAP[type]
+  const identifier = params[KEY_IDENTIFIER]
+  if (!Object.keys(identifierMap).includes(identifier)) {
     throw new Error(`不支持的标识符：${identifier}`)
   }
 
-  // 物模型属性标识符 map
-  const identifierMap = singleFunctionCodeMap[identifier]
+  // 指令属性配置
+  // { address: 0xA410, dataLength: 4, byteLength: 8, functionCode: 0x10, desc: '电表校时' },
+  const instructionConfig = identifierMap[identifier]
+  const functionCode = parseInt(instructionConfig.functionCode)
+
+  // 从机地址
+  const slaveAddress = 0xAA
 
   // 寄存器起始地址
-  const registerStartAddress = identifierMap.address
+  const registerStartAddress = instructionConfig.address
 
   // 数据长度 - 寄存器个数
-  const dataLength = identifierMap.dataLength
+  const dataLength = instructionConfig.dataLength
 
   if (functionCode === 0x04 || functionCode === 0x03) {
     // 从机地址+功能码+寄存器起始地址+数据长度+校验码
-    const dataHexStr = `${slaveAddress}${toHexString(functionCode)}${toHexString(registerStartAddress)}${toHexString(dataLength, 4)}`
+    const dataHexStr = `${toHexString(slaveAddress)}${toHexString(functionCode)}${toHexString(registerStartAddress)}${toHexString(dataLength, 4)}`
     const buffer = hexStringToArrayBuffer(dataHexStr)
     const dataFrame = new Uint8Array(buffer)
     return `HD45:${dataHexStr}${toHexString(calculateCRC16(dataFrame), 4)}`
   } else if (functionCode === 0x10) { 
+    const KEY_INPUT_DATA = 'inputData'
+    if (!paramKeys.includes(KEY_INPUT_DATA)) {
+      throw new Error('入参 params 中缺少输入参数 inputData 字段')
+    }
+
+    // 输入参数
+    const inputData = params[KEY_INPUT_DATA]
+
     // 属性值
-    const identifierValue = params[identifier]
+    const identifierValue = inputData[identifier]
+    if (typeof identifierValue === 'undefined') {
+      throw new Error(`入参 inputData 中缺少标识符 ${identifier} 的值`)
+    }
+
     // 字节长度
-    const byteLength = identifierMap.byteLength
-    let frameHexStr = `${slaveAddress}${toHexString(functionCode)}${toHexString(registerStartAddress)}${toHexString(dataLength, 4)}${toHexString(byteLength)}`
+    const byteLength = instructionConfig.byteLength
+    let frameHexStr = `${toHexString(slaveAddress)}${toHexString(functionCode)}${toHexString(registerStartAddress)}${toHexString(dataLength, 4)}${toHexString(byteLength)}`
 
     if (identifier === 'Time') {
       // 获取中国时间
@@ -565,6 +640,16 @@ function toHexString(number, maxLength = 2) {
   }
 
   return number.toString(16).toUpperCase().padStart(maxLength, '0')
+}
+
+/**
+ * 
+ * @param {string} hexString 十六进制字符串
+ * @param {number} maxLength 
+ * @returns 十进制字符串
+ */
+function toDecString(hexString, maxLength) {
+  return parseInt(hexString, 16).toString().padStart(maxLength, '0')
 }
 
 function swapHexByteOrder(hexStr) {

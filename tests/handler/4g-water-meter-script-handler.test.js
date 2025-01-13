@@ -1,65 +1,48 @@
 import { protocolToRawData, rawDataToProtocol } from '@src/handler/4g-water-meter-script-handler'
-import { beforeAll } from 'vitest'
 import { expect } from 'vitest'
 import { describe, it } from 'vitest'
 import { hexStringToArrayBuffer } from '@src/lib/bytes-utils'
 
-beforeAll(() => {
-  // 使用示例
-  try {
-    // console.log('down: Relay 00', protocolToRawData('{"address":"254","functionCode": "0x03","params":{"Relay": true }}'))
-    // console.log('down: Relay 01', protocolToRawData('{"address":"254","functionCode": "0x10","params":{"Relay": 1 }}'))
-    // console.log('down: Relay 02', protocolToRawData('{"address":"254","functionCode": "0x10","params":{"Relay": 2 }}'))
-    // console.log('down: Time', protocolToRawData('{"address":"254","functionCode": "0x10","params":{"Time": 1733741865507 }}'))
-    // console.log('down: DayWaterCFV', protocolToRawData('{"address":"254","functionCode": "0x03","params":{"DayWaterCFV": true }}'))
-    // console.log('down: WaterCFV', protocolToRawData('{"address":"254","functionCode": "0x03","params":{"WaterCFV": true }}'))
-
-    // const dayWaterCFV1 = '00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00 29 46 00 00'
-    // const waterCFV1Buffer = hexStringToArrayBuffer(dayWaterCFV1)
-    // const dayWaterCFV1Frame = new Uint8Array(waterCFV1Buffer)
-    // const result = {}
-    // for (let i = 0; i < 124; i += 4) {
-    //   const byte = dayWaterCFV1Frame.slice(i, i + 4)
-    //   result[i / 4 + 1] = DATA_TYPES.UINT_32.parse(byte) / 100
-    // }
-    // console.log(result)
- 
-    // console.log('Version', rawDataToProtocol('{"data":"HD45:FE 03 04 22 94 01 19 7E F2","identifier":"Version"}'))
-    // console.log('Temp', rawDataToProtocol('{"data":"HD45:FE 03 02 07 4D 6E 55","identifier":"Temp"}'))
-    // console.log('WaterCFV', rawDataToProtocol('{"data":"HD45:FE 03 04 00 00 29 46 6B 5E","identifier":"WaterCFV"}'))
-    // console.log('Time', rawDataToProtocol('{"data":"HD45:FE 03 08 14 18 0C 01 09 0F 03 2F 71 81","identifier":"Time"}'))
-    // console.log('DayWaterCFV', rawDataToProtocol('{"data":"HD45:FE 03 70 00 00 29 46 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 29 46 23 CE","identifier":"DayWaterCFV"}'))
-    // console.log('Relay', rawDataToProtocol('{"data":"HD45:53 10 9C 6A 00 01 02 37","identifier":"Relay"}'))
-    // console.log('Time', rawDataToProtocol('{"data":"HD45:53 10 A4 10 00 04 EE 8D","identifier":"Time"}'))
-
-  } catch (error) {
-    console.error('解析错误:', error)
-  }
-})
-
-describe('抄读数据，云到设备，生成Modbus帧', () => {
+describe('protocolToRawData 云到设备', () => {
   it('WaterCFV', () => {
-    const jsonString = '{"address":"170","functionCode": "0x03","params":{"WaterCFV": true }}'
+    const jsonString = '{"type":"get","params":{"identifier":"WaterCFV"}}'
     const result = protocolToRawData(jsonString)
     expect(result).toBe('HD45:AA039C4D00026397')
   })
 
   it('Version', () => {
-    const jsonString = '{"address":"170","functionCode": "0x03","params":{"Version": true }}'
+    const jsonString = '{"type": "get","params":{"identifier":"Version"}}'
     const result = protocolToRawData(jsonString)
     expect(result).toBe('HD45:AA039DA00002F25E')
   })
 
   it('Temp', () => {
-    const jsonString = '{"address":"170","functionCode": "0x03","params":{"Temp": true }}'
+    const jsonString = '{"type": "get","params":{ "identifier":"Temp" }}'
     const result = protocolToRawData(jsonString)
     expect(result).toBe('HD45:AA039C690001639D')
   })
+
+  it('Time set', () => {
+    const jsonString = '{"type": "set","params":{ "identifier":"Time","inputData":{"Time":1733741865507}}}'
+    const result = protocolToRawData(jsonString)
+    expect(result).toBe('HD45:AA10A41000040814180C010912392DC6F9')
+  })
+
+  it('Relay action: 01', () => {
+    const jsonString = '{"type": "action","params":{"identifier":"Relay","inputData":{"Relay":1}}}'
+    const result = protocolToRawData(jsonString)
+    expect(result).toBe('HD45:AA109C6A0001020001B9A4')
+  })
+
+  it('Relay action: 02', () => {
+    const jsonString = '{"type": "action","params":{"identifier":"Relay","inputData":{"Relay": 2}}}'
+    const result = protocolToRawData(jsonString)
+    expect(result).toBe('HD45:AA109C6A0001020002F9A5')
+  })
 })
 
-describe('rawDataToProtocol 设备到云，数据解析', () => {
-
-  it('返回正确的日期', () => {
+describe('rawDataToProtocol 设备到云', () => {
+  it('Time', () => {
     const year = '14 18 0C 01 09 0F 03 2F'
     const yearBuffer = hexStringToArrayBuffer(year)
     const yearFrame = new Uint8Array(yearBuffer)
@@ -72,15 +55,48 @@ describe('rawDataToProtocol 设备到云，数据解析', () => {
     const seconds = yearFrame[7]
     const curDate = new Date(fullYear, month, day, hour, minutes, seconds)
 
-    const framJsonString = '{"data":"HD45:AA 03 08 14 18 0C 01 09 0F 03 2F 65 B0","identifier":"Time"}'
+    const framJsonString = '{"inputConfig":{"identifier":"Time"},"result":{"data":"HD45:AA030814180C01090F032F65B0"}}'
     const result = rawDataToProtocol(framJsonString)
     expect(result.data).toBe(curDate.getTime().toString())
+  })
+
+  it('Temp', () => {
+    const hexString = '{"inputConfig":{"identifier":"Temp"},"result":{"data":"HD45:FE0302074D6E55"}}'
+    const result = rawDataToProtocol(hexString)
+    expect(result.data).toBe(18.69)
+  })
+
+  it('WaterCFV', () => {
+    const hexString = '{"inputConfig":{"identifier":"WaterCFV"},"result":{"data":"HD45:FE0304000029466B5E"}}'
+    const result = rawDataToProtocol(hexString)
+    expect(result.data).toBe(105.66)
+  })
+
+  it('DayWaterCFV', () => {
+    const hexString = '{"inputConfig":{"identifier":"DayWaterCFV"},"result":{"data":"HD45:FE03700000294600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000294623CE"}}'
+    const result = rawDataToProtocol(hexString)
+    expect(result.data).toMatchObject({
+      1: 105.66,
+    })
+  })
+
+  it('Relay action reply', () => {
+    const hexString = '{"inputConfig":{"identifier":"DayWaterCFV"},"result":{"data":"HD45:53109C6A00010237"}}'
+    const result = rawDataToProtocol(hexString)
+    expect(result.data).toBe(1)
+  })
+
+  it('Time set reply', () => {
+    const hexString = '{"inputConfig":{"identifier":"DayWaterCFV"},"result":{"data":"HD45:5310A4100004EE8D"}}'
+    const result = rawDataToProtocol(hexString)
+    expect(result.data).toBe(4)
   })
 })
 
 describe('设备主动上报，数据解析', () => {
   it('All', () => {
-    const request = '{"data": "HDWB:L9103M0140B4233C00U5F01T48031823011224PB5F85201000000B4233C000232019622B4233C000100000000000000000000000000000000EE18EE177F230014FF7ADE3DCEED0000EE00300312170C1800000000000000000000000000000000000000000000E80300000000000000000000000000000600286463000000000000B4000000055F010807C40950C30000000000003200011099220000000000000000E8FD7F0540E803E803E803E803000000000000E803E803E803E803E803E803E803E803E803E803E8030C10FF0000000087000000000000000000D84022E307704D0010171200000000FFFFFF18000000000000000000000000000000106707902410400886894362C505J1200000000EE18EE177F230014FF7ADE3DCEED00001700000000EE18EE177F230014FF7ADE3DCEED00000000000000000C00000000F6E772F5E1F9B423FEFBFDBFDF51CEED007600137940216608018318150100000000000000000000000000000000EF7C1B04000000003D191000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000823900000000000000000000000000000000000000000000S3A","identifier": "all"}'
+    // deviceName: 000060009140
+    const request = '{"inputConfig":{"identifier":"all"},"result":{"data":"HDWB:L9103M0140B4233C00U5F01T48031823011224PB5F85201000000B4233C000232019622B4233C000100000000000000000000000000000000EE18EE177F230014FF7ADE3DCEED0000EE00300312170C1800000000000000000000000000000000000000000000E80300000000000000000000000000000600286463000000000000B4000000055F010807C40950C30000000000003200011099220000000000000000E8FD7F0540E803E803E803E803000000000000E803E803E803E803E803E803E803E803E803E803E8030C10FF0000000087000000000000000000D84022E307704D0010171200000000FFFFFF18000000000000000000000000000000106707902410400886894362C505J1200000000EE18EE177F230014FF7ADE3DCEED00001700000000EE18EE177F230014FF7ADE3DCEED00000000000000000C00000000F6E772F5E1F9B423FEFBFDBFDF51CEED007600137940216608018318150100000000000000000000000000000000EF7C1B04000000003D191000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000823900000000000000000000000000000000000000000000S3A", "deviceName":"000060009140"}}'
     const result = rawDataToProtocol(request)
     // expect(result).toBe('HD45:AA039C400001B255')
     expect(result.method).toBe('thing.event.property.post')

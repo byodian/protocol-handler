@@ -1,6 +1,10 @@
 /**
  * 水表脚本
+ * v1 2024-12-30 17:15
+ * v2 2025-01-16 10:35 数据增加校验和base64编码
  */
+
+// const Buffer = require('buffer/').Buffer
 
 const DATA_TYPES = {
   UINT_8: {
@@ -96,24 +100,22 @@ const METHOD = {
  * dataLength: 寄存器的个数，每个寄存器可以存储两个字节长度的数据，高位在前，地位在后
  */
 const FUNCTION_CODE_MAP = {
-  // 读取属性
-  0x04: {
+  // 属性抄读
+  get: {
+    WaterCFV: { address: 0x9C4D, dataLength: 2, functionCode: 0x03, desc: '总用水量' },
+    Temp: { address: 0x9C69, dataLength: 1, functionCode: 0x03, desc: '表内温度' },
+    Version: { address: 0x9DA0, dataLength: 2, functionCode: 0x03, desc: '版本号' },
+    Time: { address: 0xA410, dataLength: 4, functionCode: 0x03, desc: '表内时间' },
+    Relay: { address: 0x9C6A, dataLength: 1, functionCode: 0x03, desc: '读取闸控状态' },
+    DayWaterCFV: { address: 0x9C6C, dataLength: 62, functionCode: 0x03, desc: '读取近31日冻结总用水量，4字节表示一个用水量' },
   },
-  0x03: {
-    WaterCFV: { address: 0x9C4D, dataLength: 2, desc: '总用水量' },
-    Temp: { address: 0x9C69, dataLength: 1, desc: '表内温度' },
-    Version: { address: 0x9DA0, dataLength: 2, desc: '版本号' },
-    Time: { address: 0xA410, dataLength: 4, desc: '表内时间' },
-    Relay: { address: 0x9C6A, dataLength: 1, desc: '读取闸控状态' },
-    DayWaterCFV: { address: 0x9C6C, dataLength: 62, desc: '读取近31日冻结总用水量，4字节表示一个用水量' },
+  // 属性设置
+  set: {
+    Time: { address: 0xA410, dataLength: 4, byteLength: 8, functionCode: 0x10, desc: '水表校时' },
   },
-  // 写数据
-  0x05: {
-  },
-  // 写数据
-  0x10: {
-    Relay: { address: 0x9C6A, dataLength: 1, byteLength: 2, desc: '开合闸，切闸 01 合闸 02' },
-    Time: { address: 0xA410, dataLength: 4, byteLength: 8, desc: '水表校时' },
+  // 动作调用
+  action: {
+    Relay: { address: 0x9C6A, dataLength: 1, byteLength: 2, functionCode: 0x10, desc: '开合闸，切闸 01 合闸 02' },
   },
 }
 
@@ -129,13 +131,14 @@ const DATA_TYPE_MAP = {
 
 /**
  * 设备到云消息解析
- * Modbus RTU 报文字节含义：
- * 第一个字节：从机地址
- * 第二个字节：功能码
- * 第三个字节：数据长度
- * 模拟执行输入参数 {"data":"FE0304229401197EF2","identifier":"Version"}
- * @param {string} jsonString "{\"data\": \"FE0304229401197EF2\", \"identifier\": \"Version\"}" 
- * @param {string} jsonString.data 报文帧
+ * 模拟执行输入参数
+ * 1. Time
+ * {"inputConfig":{"identifier":"Time","address":254,"port":1},"result":{"data":"/gMIFBgMAQkPAy9xgQ==","port":1}}
+ * 2. Version
+ * {"inputConfig":{"identifier":"Version","address":254,"port":1},"result":{"data":"/gMEIpQBGX7y","port":1}}
+ * @param {string} jsonString '{"inputConfig":{"deviceName":"","port":1,"address":1,"identifier":""},"result":{"data":"AQQExBxgAC9y","port":1}}' 
+ * @param {string} jsonString.inputConfig 输入参数元配置(设备名称、端口号、从机地址、物模型标识符)
+ * @param {string} jsonString.result 设备返回的数据(base64编码, 端口号)
  * @param {string} jsonString.identifier 物模型标识符
  * @returns {object} result
  * @returns {string} result.data 物模型属性值
@@ -144,10 +147,35 @@ const DATA_TYPE_MAP = {
  * thing.event.property.post (主动上报) | thing.service.property.get (属性获取) | thing.service.property.set (属性设置) | thing.service.${identifier} (动作调用)
  */
 function rawDataToProtocol(jsonString) {
+  const KEY_INPUT_CONFIG = 'inputConfig'
+  const KEY_RESULT = 'result'
+  const KEY_PORT = 'port'
+  const KEY_ADDRESS = 'address'
+  const KEY_IDENTIFIER = 'identifier'
+  const KEY_DATA = 'data'
+
   const jsonData = JSON.parse(jsonString)
+  const dataKeys = Object.keys(jsonData)
+  if (!dataKeys.includes(KEY_INPUT_CONFIG) || !dataKeys.includes(KEY_RESULT)) {
+    throw new Error('入参缺少 inputConfig 或 result 字段')
+  }
+
+  const inputConfig  = jsonData.inputConfig
+  const inputConfigKeys = Object.keys(inputConfig)
+  if (!inputConfigKeys.includes(KEY_ADDRESS) || !inputConfigKeys.includes(KEY_ADDRESS) || !inputConfigKeys.includes(KEY_IDENTIFIER)) {
+    throw new Error('入参 inputConfig 缺少 address、port 或 identifier 字段')
+  }
+
+  const result = jsonData.result
+  const resultKeys = Object.keys(result)
+  if (!resultKeys.includes(KEY_DATA) || !resultKeys.includes(KEY_PORT)) {
+    throw new Error('入参 result 缺少 data 或 port 字段')
+  }
 
   // 报文帧
-  const rawDataHexStr = jsonData.data.replace(/\s+|^0x/g, '')
+  const rawData = result.data.replace(/\s+|^0x/g, '')
+  // base64 decode
+  const rawDataHexStr = base64Decode(rawData).toString('hex').toUpperCase()
 
   // 校验CRC
   const deviceCRC = rawDataHexStr.slice(-4)
@@ -156,8 +184,6 @@ function rawDataToProtocol(jsonString) {
     throw new Error('CRC校验失败')
   }
   
-  // 标识符
-  const identifier = jsonData.identifier
   // 将十六进制字符串转换为 ArrayBuffer
   const buffer = hexStringToArrayBuffer(rawDataHexStr)
         
@@ -169,11 +195,18 @@ function rawDataToProtocol(jsonString) {
     throw new Error('Modbus RTU帧长度太短')
   }
 
+  // 设备上报的数据与记录不一致
+  if (inputConfig.port !== result.port || inputConfig.address !== frame[0]) {
+    throw new Error(`设备上报数据有误 input - port ${inputConfig.port} address ${inputConfig.address}, output - port ${result.port} address ${frame[0]}`)
+  }
+
   const parseFrame = {
     0x03: parsePropertyData,
     0x10: parseWriteReply,
   }
 
+  // 标识符
+  const identifier = inputConfig.identifier
   // 报文帧第二个字节为功能码
   const parser = parseFrame[frame[1]]
   const data = parser(frame, identifier)
@@ -185,66 +218,93 @@ function rawDataToProtocol(jsonString) {
 
 /**
  * 云到设备消息解析
- * 模拟执行输入参数 {"address":"1","functionCode": "0x03","params":{"WaterCFV": true }}
- * @param {string} jsonString "{\"address\":\"1\",\"functionCode\":\"0x03\",\"params\":{\"WaterCFV\":true}}"
+ * 模拟执行输入参数 
+ * 1. 抄读数据
+ * {"address":"1","type":"get","params":{"identifier":"Time"}}
+ * 2. 属性设置
+ * {"address":"1","type":"set","params":{"identifier":"Time","inputData":{"Time":1736478033533}}}
+ * 3. 动作调用
+ * {"address":"1","type":"action","params":{"identifier": "Relay", "inputData": { "Relay": 1 }}}
+ * @param {string} jsonString "{\"address\":\"1\",\"type\":\"get\",\"params\":{\"identifier\":Time}}"
  * @param {string} jsonString.address 从机地址
- * @param {string} jsonString.functionCode 功能码
- * @param {object} jsonString.params 标识符 key-value 对
+ * @param {string} jsonString.type 指令类型 get(属性抄读)/set(属性设置)/action(动作调用)
+ * @param {object} jsonString.params key-value 键值对
+ * @param {object} jsonString.params.identifier 标识符
+ * @param {object} jsonString.params.inputData 输入参数(属性设置和动作调用类型使用)
  * @param {string} jsonString.deviceName 设备名称
  * @returns {string} rawdata 设备能识别的格式数据
  */
 function protocolToRawData(jsonString) {
   const KEY_ADDRESS = 'address'
-  const KEY_FUNCTIOIN_CODE = 'functionCode'
   const KEY_PARAMS = 'params'
+  const KEY_TYPE = 'type'
   const jsonData = JSON.parse(jsonString)
   if (!Object.keys(jsonData).includes(KEY_ADDRESS) 
-    || !Object.keys(jsonData).includes(KEY_FUNCTIOIN_CODE)
+    || !Object.keys(jsonData).includes(KEY_TYPE)
     || !Object.keys(jsonData).includes(KEY_PARAMS)) {
-    throw new Error('请求参数异常')
+    throw new Error('入参缺少 address、params 或 type 字段')
   }
 
-  const functionCode = parseInt(jsonData[KEY_FUNCTIOIN_CODE])
+  const type = jsonData[KEY_TYPE]
+  if (!Object.keys(FUNCTION_CODE_MAP).includes(type)) {
+    throw new Error(`指令类型 ${type} 不支持，支持的指令类型有：get、set 和 action`)
+  }
+
+  const identifierMap = FUNCTION_CODE_MAP[type]
+
+  const params = jsonData[KEY_PARAMS]
+  const paramKeys = Object.keys(params)
+
+  // 参数中必须包含标识符
+  const KEY_IDENTIFIER = 'identifier'
+  if (!paramKeys.includes(KEY_IDENTIFIER)) {
+    throw new Error('入参 params 中缺少标识符 identifier 字段')
+  }
+
+  // 传入的标识符
+  const identifier = params[KEY_IDENTIFIER]
+  if (!Object.keys(identifierMap).includes(identifier)) {
+    throw new Error(`不支持的标识符：${identifier}`)
+  }
+
+  // 指令属性配置
+  // { address: 0x9C4D, dataLength: 2, functionCode: 0x03, desc: '总用水量' }
+  const instructionConfig = identifierMap[identifier]
+  const functionCode = parseInt(instructionConfig.functionCode)
 
   // 从机地址
   const slaveAddress = parseInt(jsonData[KEY_ADDRESS])
 
-  const params = jsonData[KEY_PARAMS]
-  const paramKeys = Object.keys(params)
-  if (Object.keys(params).length !== 1) {
-    throw new Error('请求参数异常')
-  }
-
-  const identifier = paramKeys[0]
-
-  // 功能码 map
-  const singleFunctionCodeMap = FUNCTION_CODE_MAP[functionCode]
-
-  if (!Object.keys(singleFunctionCodeMap).includes(identifier)) {
-    throw new Error(`不支持的标识符：${identifier}`)
-  }
-
-  // 物模型属性标识符 map
-  const identifierMap = singleFunctionCodeMap[identifier]
-
   // 寄存器起始地址
-  const registerStartAddress = identifierMap.address
+  const registerStartAddress = instructionConfig.address
 
   // 数据长度 - 寄存器个数
-  const dataLength = identifierMap.dataLength
+  const dataLength = instructionConfig.dataLength
 
   if (functionCode === 0x04 || functionCode === 0x03) {
     // 从机地址+功能码+寄存器起始地址+数据长度+校验码
-    const dataHexStr = `${toHexString(slaveAddress)}${toHexString(functionCode)}${toHexString(registerStartAddress)}${toHexString(dataLength, 4)}`
+    const dataHexStr = `${toHexString(slaveAddress)}${toHexString(functionCode)}${toHexString(registerStartAddress, 4)}${toHexString(dataLength, 4)}`
     const buffer = hexStringToArrayBuffer(dataHexStr)
     const dataFrame = new Uint8Array(buffer)
-    return dataHexStr + toHexString(calculateCRC16(dataFrame), 4)
-  } else if (functionCode === 0x10) { 
-    // 属性值
-    const identifierValue = params[identifier]
+    const fullFrameHexStr = dataHexStr + toHexString(calculateCRC16(dataFrame), 4)
+    return base64Encode(hexStringToArrayBuffer(fullFrameHexStr))
+  } else if (functionCode === 0x10) {
+    const KEY_INPUT_DATA = 'inputData'
+    if (!paramKeys.includes(KEY_INPUT_DATA)) {
+      throw new Error('入参 params 中缺少输入参数 inputData 字段')
+    }
+
+    // 输入参数
+    const inputData = params[KEY_INPUT_DATA]
+
+    const identifierValue = inputData[identifier]
+    if (typeof identifierValue === 'undefined') {
+      throw new Error(`入参 inputData 中缺少标识符 ${identifier} 的值`)
+    }
+
     // 字节长度
-    const byteLength = identifierMap.byteLength
-    let frameHexStr = `${toHexString(slaveAddress)}${toHexString(functionCode)}${toHexString(registerStartAddress)}${toHexString(dataLength, 4)}${toHexString(byteLength)}`
+    const byteLength = instructionConfig.byteLength
+    let frameHexStr = `${toHexString(slaveAddress)}${toHexString(functionCode)}${toHexString(registerStartAddress, 4)}${toHexString(dataLength, 4)}${toHexString(byteLength)}`
 
     if (identifier === 'Time') {
       // 获取中国时间
@@ -269,7 +329,8 @@ function protocolToRawData(jsonString) {
 
     const buffer = hexStringToArrayBuffer(frameHexStr)
     const dataFrame = new Uint8Array(buffer)
-    return frameHexStr + toHexString(calculateCRC16(dataFrame), 4)
+    const fullFrameHexStr = frameHexStr + toHexString(calculateCRC16(dataFrame), 4)
+    return base64Encode(hexStringToArrayBuffer(fullFrameHexStr))
   } else {
     throw new Error(`不支持的功能码：${functionCode}`)
   }
@@ -448,6 +509,14 @@ function checkCRC16(dataHexStr) {
   const dataFrame = new Uint8Array(buffer)
 
   return toHexString(calculateCRC16(dataFrame), 4)
+}
+
+function base64Encode(param) {
+  return Buffer.from(param).toString('base64')
+}
+
+function base64Decode(param) {
+  return Buffer.from(param, 'base64')
 }
 
 export {
