@@ -1,8 +1,8 @@
-import { DATA_TYPES, hexStringToArrayBuffer, swapHexByteOrder } from '@src/lib/bytes-utils'
+import { DATA_TYPES, base64Encode, hexStringToArrayBuffer, swapHexByteOrder } from '@src/lib/bytes-utils'
 import { expect } from 'vitest'
 import { describe, it } from 'vitest'
 
-describe('数据解析器', () => {
+describe('工具函数测试用例', () => {
   it('UINT_32 parser', () => {
     const hexString = '00002946'
     const buffer = hexStringToArrayBuffer(hexString)
@@ -27,5 +27,12 @@ describe('数据解析器', () => {
   it('swapHexByteOrder', () => {
     const hexString = '3B02'
     expect(parseInt(swapHexByteOrder(hexString), 16) / 100).toBe(5.71)
+  })
+
+  it('base64Encode', () => {
+    const hexString = '01 04 04 C4 1C 60 00 2F 72'
+    const buffer = hexStringToArrayBuffer(hexString)
+    const frame = new Uint8Array(buffer)
+    expect(base64Encode(frame)).toBe('AQQExBxgAC9y')
   })
 })
