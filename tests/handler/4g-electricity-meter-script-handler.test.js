@@ -64,14 +64,14 @@ describe('rawDataToProtocol 设备到云', () => {
   it('P', () => {
     const jsonString = '{"inputConfig":{"identifier":"P"},"result":{"data":"HD45:AA0304001FC2F60019"}}'
     const result = rawDataToProtocol(jsonString)
-    expect(result.data).toBe(20815.26)
+    expect(result.data).toBe(208.1526)
     expect(result.method).toBe('thing.service.property.get')
   })
 
   it('S', () => {
     const jsonString = '{"inputConfig":{"identifier":"S"},"result":{"data":"HD45:AA0304001B203488E9"}}'
     const result = rawDataToProtocol(jsonString)
-    expect(result.data).toBe(17777.16)
+    expect(result.data).toBe(177.7716)
     expect(result.method).toBe('thing.service.property.get')
   })
 
@@ -106,14 +106,21 @@ describe('rawDataToProtocol 设备到云', () => {
   it('Qa', () => {
     const jsonString = '{"inputConfig":{"identifier":"Qa"},"result":{"data":"HD45:FE0304FFFFFFFFF4A8"}}'
     const result = rawDataToProtocol(jsonString)
-    expect(result.data).toBe(-0.01)
+    expect(result.data).toBe(-0.0001)
     expect(result.method).toBe('thing.service.property.get')
   })
 
   it('Qb', () => {
     const jsonString = '{"inputConfig":{"identifier":"Qb"},"result":{"data":"HD45:AA03048000000108F9"}}'
     const result = rawDataToProtocol(jsonString)
-    expect(result.data).toBe(-21474836.47)
+    expect(result.data).toBe(-214748.3647)
+    expect(result.method).toBe('thing.service.property.get')
+  })
+
+  it('PF', () => {
+    const jsonString = '{"inputConfig":{"identifier":"PF"},"result":{"data":"HD45:AA030203DE1D34"}}'
+    const result = rawDataToProtocol(jsonString)
+    expect(result.data).toBe(0.099)
     expect(result.method).toBe('thing.service.property.get')
   })
 })

@@ -142,25 +142,33 @@ const DATA_TYPE_MAP = {
   Ic: { dataType: 'UINT_32', decimalDigits: 3 },
   GridFreq: { dataType: 'UINT_16', decimalDigits: 2 },
   PF: { dataType: 'UINT_16', decimalDigits: 4 },
-  S: { dataType: 'UINT_32', decimalDigits: 2 },
+  S: { dataType: 'UINT_32', decimalDigits: 4 },
+
+  // 组合有功总电能
+  PEnergy: { dataType: 'UINT_32', decimalDigits: 2 },
+  // 正向有功总电能
+  FPEnergy: { dataType: 'UINT_32', decimalDigits: 2 },
+  // 正向无功总电能
   FQEnergy: { dataType: 'UINT_32', decimalDigits: 2 },
 
-  PEnergy: { dataType: 'UINT_32', decimalDigits: 2 },
-  FPEnergy: { dataType: 'UINT_32', decimalDigits: 2 },
+  // 尖时段有功总电能
   FPEnergy1: { dataType: 'UINT_32', decimalDigits: 2 },
+  // 峰时段有功总电能
   FPEnergy2: { dataType: 'UINT_32', decimalDigits: 2 },
+  // 平时段有功总电能
   FPEnergy3: { dataType: 'UINT_32', decimalDigits: 2 },
+  // 谷时段有功总电能
   FPEnergy4: { dataType: 'UINT_32', decimalDigits: 2 },
 
-  Pa: { dataType: 'UINT_32', decimalDigits: 2 },
-  Pb: { dataType: 'UINT_32', decimalDigits: 2 },
-  Pc: { dataType: 'UINT_32', decimalDigits: 2 },
-  P: { dataType: 'UINT_32', decimalDigits: 2 },
+  Pa: { dataType: 'UINT_32', decimalDigits: 4 },
+  Pb: { dataType: 'UINT_32', decimalDigits: 4 },
+  Pc: { dataType: 'UINT_32', decimalDigits: 4 },
+  P: { dataType: 'UINT_32', decimalDigits: 4 },
 
-  Qa: { dataType: 'INT_32', decimalDigits: 2 },
-  Qb: { dataType: 'INT_32', decimalDigits: 2 },
-  Qc: { dataType: 'INT_32', decimalDigits: 2 },
-  Q: { dataType: 'INT_32', decimalDigits: 2 },
+  Qa: { dataType: 'INT_32', decimalDigits: 4 },
+  Qb: { dataType: 'INT_32', decimalDigits: 4 },
+  Qc: { dataType: 'INT_32', decimalDigits: 4 },
+  Q: { dataType: 'INT_32', decimalDigits: 4 },
 
   Temp: { dataType: 'UINT_16', decimalDigits: 2 },
   Version: { dataType: 'BCD', decimalDigits: null },
@@ -242,7 +250,6 @@ function rawDataToProtocol(jsonString) {
     const deviceCRC = frameHexString.slice(-4)
     const calculatedCRC = checkCRC16(frameHexString.slice(0, -4))
     if (deviceCRC !== calculatedCRC) {
-      console.log(deviceCRC, calculatedCRC)
       throw new Error('CRC校验失败')
     }
 

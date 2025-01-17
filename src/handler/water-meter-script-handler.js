@@ -107,7 +107,7 @@ const FUNCTION_CODE_MAP = {
     Version: { address: 0x9DA0, dataLength: 2, functionCode: 0x03, desc: '版本号' },
     Time: { address: 0xA410, dataLength: 4, functionCode: 0x03, desc: '表内时间' },
     Relay: { address: 0x9C6A, dataLength: 1, functionCode: 0x03, desc: '读取闸控状态' },
-    DayWaterCFV: { address: 0x9C6C, dataLength: 62, functionCode: 0x03, desc: '读取近31日冻结总用水量，4字节表示一个用水量' },
+    DayWaterCFV: { address: 0x9C6C, dataLength: 56, functionCode: 0x03, desc: '读取近28日冻结总用水量，4字节表示一个用水量' },
   },
   // 属性设置
   set: {

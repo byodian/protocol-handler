@@ -1,7 +1,9 @@
 /**
  * 2576736683中长款485单相漏电器
- * v1 2024-12-30 17:15
- * v2 2025-01-16 10:35 数据增加校验和base64编码
+ * v1.0 2024-12-30 17:15
+ * v2.0 2025-01-16 10:35 数据增加校验和base64编码
+ * v2.1 2025-01-17 11:00 设备数据根据实际倍数换算
+ * v2.2 2025-01-21 15:29 更新闸控状态数据转换算法
  */
 
 // const Buffer = require('buffer/').Buffer
@@ -96,33 +98,33 @@ const FUNCTION_CODE_MAP = {
   // 属性抄读
   get: {
     Relay: { address: 0x0001, dataLength: 1, functionCode: 0x01, desc: '开合闸状态' },
-    GridFreq: { address: 0x0004, dataLength: 1, functionCode: 0x04, desc: '' }, 
-    Leakage: { address: 0x0005, dataLength: 1, functionCode: 0x04, desc: '' },
-    TempA: { address: 0x0007, dataLength: 1, functionCode: 0x04, desc: '' },
-    Ua: { address: 0x0008, dataLength: 1, functionCode: 0x04, desc: '' },
-    Ia: { address: 0x0009, dataLength: 1, functionCode: 0x04, desc: '' },
-    PFa: { address: 0x000A, dataLength: 1, functionCode: 0x04, desc: '' },
-    Pa: { address: 0x000B, dataLength: 1, functionCode: 0x04, desc: '' },
-    Qa: { address: 0x000C, dataLength: 1, functionCode: 0x04, desc: '' },
-    Sa: { address: 0x000D, dataLength: 1, functionCode: 0x04, desc: '' },
-    TempB: { address: 0x0010, dataLength: 1, functionCode: 0x04, desc: '' },
-    Ub: { address: 0x0011, dataLength: 1, functionCode: 0x04, desc: '' },
-    Ib: { address: 0x0012, dataLength: 1, functionCode: 0x04, desc: '' },
-    PFb: { address: 0x0013, dataLength: 1, functionCode: 0x04, desc: '' },
-    Pb: { address: 0x0014, dataLength: 1, functionCode: 0x04, desc: '' },
-    Qb: { address: 0x0015, dataLength: 1, functionCode: 0x04, desc: '' },
-    Sb: { address: 0x0016, dataLength: 1, functionCode: 0x04, desc: '' },
-    TempC: { address: 0x0019, dataLength: 1, functionCode: 0x04, desc: '' },
-    Uc: { address: 0x001A, dataLength: 1, functionCode: 0x04, desc: '' },
-    Ic: { address: 0x001B, dataLength: 1, functionCode: 0x04, desc: '' },
-    PFc: { address: 0x001C, dataLength: 1, functionCode: 0x04, desc: '' },
-    Pc: { address: 0x001D, dataLength: 1, functionCode: 0x04, desc: '' },
-    Qc: { address: 0x001E, dataLength: 1, functionCode: 0x04, desc: '' },
-    Sc: { address: 0x001F, dataLength: 1, functionCode: 0x04, desc: '' },
-    P: { address: 0x0022, dataLength: 1, functionCode: 0x04, desc: '' },
-    Q: { address: 0x0023, dataLength: 1, functionCode: 0x04, desc: '' },
-    S: { address: 0x0024, dataLength: 1, functionCode: 0x04, desc: '' },
-    PEnergy: { address: 0x0025, dataLength: 2, functionCode: 0x04, desc: '' },
+    GridFreq: { address: 0x0004, dataLength: 1, functionCode: 0x04, desc: '频率' }, 
+    Leakage: { address: 0x0005, dataLength: 1, functionCode: 0x04, desc: '漏电流' },
+    TempA: { address: 0x0007, dataLength: 1, functionCode: 0x04, desc: 'A相温度' },
+    Ua: { address: 0x0008, dataLength: 1, functionCode: 0x04, desc: 'A相电压' },
+    Ia: { address: 0x0009, dataLength: 1, functionCode: 0x04, desc: 'A相电流' },
+    PFa: { address: 0x000A, dataLength: 1, functionCode: 0x04, desc: 'A相功率因数' },
+    Pa: { address: 0x000B, dataLength: 1, functionCode: 0x04, desc: 'A相有功功率' },
+    Qa: { address: 0x000C, dataLength: 1, functionCode: 0x04, desc: 'A相无功功率' },
+    Sa: { address: 0x000D, dataLength: 1, functionCode: 0x04, desc: 'A相视在功率' },
+    TempB: { address: 0x0010, dataLength: 1, functionCode: 0x04, desc: 'B相温度' },
+    Ub: { address: 0x0011, dataLength: 1, functionCode: 0x04, desc: 'B相电压' },
+    Ib: { address: 0x0012, dataLength: 1, functionCode: 0x04, desc: 'B相电流' },
+    PFb: { address: 0x0013, dataLength: 1, functionCode: 0x04, desc: 'B相功率因数' },
+    Pb: { address: 0x0014, dataLength: 1, functionCode: 0x04, desc: 'B相有功功率' },
+    Qb: { address: 0x0015, dataLength: 1, functionCode: 0x04, desc: 'B相无功功率' },
+    Sb: { address: 0x0016, dataLength: 1, functionCode: 0x04, desc: 'B相视在功率' },
+    TempC: { address: 0x0019, dataLength: 1, functionCode: 0x04, desc: 'C相温度' },
+    Uc: { address: 0x001A, dataLength: 1, functionCode: 0x04, desc: 'C相电压' },
+    Ic: { address: 0x001B, dataLength: 1, functionCode: 0x04, desc: 'C相电流' },
+    PFc: { address: 0x001C, dataLength: 1, functionCode: 0x04, desc: 'C相功率因数' },
+    Pc: { address: 0x001D, dataLength: 1, functionCode: 0x04, desc: 'C相有功功率' },
+    Qc: { address: 0x001E, dataLength: 1, functionCode: 0x04, desc: 'C相无功功率' },
+    Sc: { address: 0x001F, dataLength: 1, functionCode: 0x04, desc: 'C相视在功率' },
+    P: { address: 0x0022, dataLength: 1, functionCode: 0x04, desc: '总有功功率' },
+    Q: { address: 0x0023, dataLength: 1, functionCode: 0x04, desc: '总无功功率' },
+    S: { address: 0x0024, dataLength: 1, functionCode: 0x04, desc: '总视在功率' },
+    PEnergy: { address: 0x0025, dataLength: 2, functionCode: 0x04, desc: '组合有功总能能' },
   },
   // 属性设置
   set: {
@@ -131,6 +133,38 @@ const FUNCTION_CODE_MAP = {
   action: {
     Relay: { address: 0x0001, functionCode: 0x05, desc: '开合闸，合闸 1 - 0xFF00 分闸 0 - 0x0000' },
   },
+}
+
+// 响应帧数据类型
+const DATA_TYPE_MAP = {
+  Relay: {  decimalDigits: null },
+  Leakage: {  decimalDigits: null },
+  TempA: {  decimalDigits: null },
+  TempB: {  decimalDigits: null },
+  TempC: {  decimalDigits: null },
+  Ua: {  decimalDigits: null },
+  Ub: {  decimalDigits: null },
+  Uc: {  decimalDigits: null },
+  GridFreq: {  decimalDigits: 1 },
+  Ia: {  decimalDigits: 2 },
+  Ib: {  decimalDigits: 2 },
+  Ic: {  decimalDigits: 2 },
+  PFa: {  decimalDigits: 2 },
+  PFb: {  decimalDigits: 2 },
+  PFc: {  decimalDigits: 2 },
+  PEnergy: {  decimalDigits: 3 },
+  Pa: {  decimalDigits: null },
+  Pb: {  decimalDigits: null },
+  Pc: {  decimalDigits: null },
+  Qa: {  decimalDigits: null },
+  Qb: {  decimalDigits: null },
+  Qc: {  decimalDigits: null },
+  Sa: {  decimalDigits: null },
+  Sb: {  decimalDigits: null },
+  Sc: {  decimalDigits: null },
+  P: {  decimalDigits: null },
+  Q: {  decimalDigits: null },
+  S: {  decimalDigits: null },
 }
 
 const METHOD = {
@@ -378,7 +412,7 @@ function toHexString(number, maxLength = 2) {
    * @returns {string} result.method 物模型方法
    * thing.event.property.post (主动上报) | thing.service.property.get (属性获取) | thing.service.property.set (属性设置) | thing.service.${identifier} (动作调用)
    */
-function parsePropertyData(frame) {
+function parsePropertyData(frame, identifier) {
   // 数据长度
   const dataLength = frame[2]
   const dataStartIndex = 3
@@ -386,8 +420,42 @@ function parsePropertyData(frame) {
 
   // 数据部分
   const dataBytes = frame.slice(dataStartIndex, dataEndIndex)
+
+  // 获取属性的数据类型
+  const dataTypeMap = DATA_TYPE_MAP[identifier]
+  if (!dataTypeMap) {
+    throw new Error(`不支持的标识符：${identifier}`)
+  }
+
+  const decimalDigits = dataTypeMap.decimalDigits
+
   // 默认类型为 16 位无符号整型
-  const data = DATA_TYPES.UINT_16.parse(dataBytes)
+  let data 
+  if (identifier !== 'PEnergy') {
+    if (identifier === 'Relay') {
+      data = DATA_TYPES.UINT_8.parse(dataBytes)
+    } else {
+
+      data = DATA_TYPES.UINT_16.parse(dataBytes)
+    }
+
+    if (decimalDigits !== null) {
+      data = data / 10 ** decimalDigits
+    }
+
+    // 接线柱温度减去 40 为实际温度
+    if (identifier.includes('Temp')) {
+      data = data - 40
+    }
+  } else {
+    // 获取高位字节
+    const highValue = DATA_TYPES.UINT_16.parse(dataBytes.slice(0, 2))
+
+    // 获取低位字节
+    const lowValue = DATA_TYPES.UINT_16.parse(dataBytes.slice(2)) / 10 ** decimalDigits
+
+    data = highValue + lowValue
+  }
 
   return {
     data,
