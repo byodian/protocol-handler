@@ -2,6 +2,7 @@
  * 4G水表脚本
  * v1 2024-12-30 17:15
  * v2 2025-01-16 10:35 数据增加校验
+ * v3.0 2025-02-05 16:29 删除 JSON.parse
  */
 
 const DATA_TYPES = {
@@ -132,20 +133,22 @@ const METHOD = {
  * 模拟执行输入参数
  * 1. Time
  * {"inputConfig":{"identifier":"Time"},"result":{"data":"HD45:AA030814180C01090F032F65B0"}}
- * @param {string} jsonString '{"inputConfig":{"deviceName":"","port":1,"address":1,"identifier":""},"result":{"data":"", "deviceName": ""}}'
- * @param {string} jsonString.inputConfig 输入参数元配置(设备名称、端口号、从机地址、物模型标识符)
- * @param {string} jsonString.result 设备返回的数据(16进制报文、端口号、设备名称)
- * @param {string} jsonString.identifier 物模型标识符
+ * @param {object} jsonData
+ * @param {object} jsonData.inputConfig  inputConfig 输入参数元配置(设备名称、端口号、从机地址、物模型标识符)
+ * @param {string} inputConfig.identifier 物模型标识符
+ * @param {string} inputConfig.deviceName 设备名称
+ * @param {object} jsonData.result result 设备返回的数据(16进制报文、端口号、设备名改)
+ * @param {string} result.data 16进制报文
+ * @param {string} result.deviceName 设备名称
  * @returns {object} result
  * @returns {string} result.data 物模型属性值
  * @returns {string} result.identifier 物模型标识符
  * @returns {string} result.method 物模型方法 
  * thing.event.property.post (主动上报) | thing.service.property.get (属性获取) | thing.service.property.set (属性设置) | thing.service.${identifier} (动作调用)
  */
-function rawDataToProtocol(jsonString) {
+function rawDataToProtocol(jsonData) {
   const KEY_RESULT = 'result'
   const KEY_INPUT_CONFIG = 'inputConfig'
-  const jsonData = JSON.parse(jsonString)
   const dataKeys = Object.keys(jsonData)
   if (!dataKeys.includes(KEY_RESULT) || !dataKeys.includes(KEY_INPUT_CONFIG)) {
     throw new Error('入参缺少 inputConfig 或 result 字段')
@@ -285,18 +288,17 @@ function rawDataToProtocol(jsonString) {
  * {"type":"set","params":{"identifier":"Time","inputData":{"Time":1736478033533}}}
  * 3. 动作调用
 *  {"type":"action","params":{"identifier":"Relay","inputData":{"Relay":1}}}
- * @param {string} jsonString "{\"type\":\"get\",\"params\":{\"identifier\":Time}}"
- * @param {string} jsonString.type 指令类型 get(属性抄读)/set(属性设置)/action(动作调用)
- * @param {object} jsonString.params key-value 键值对
- * @param {object} jsonString.params.identifier 标识符
- * @param {object} jsonString.params.inputData 输入参数(属性设置和动作调用类型使用)
- * @param {string} jsonString.deviceName 设备名称
+ * @param {object} jsonData
+ * @param {string} jsonData.type 指令类型 get(属性抄读)/set(属性设置)/action(动作调用)
+ * @param {object} jsonData.params key-value 键值对
+ * @param {object} jsonData.params.identifier 标识符
+ * @param {object} jsonData.params.inputData 输入参数(属性设置和动作调用类型使用)
+ * @param {string} jsonData.deviceName 设备名称
  * @returns {string} rawdata 设备能识别的格式数据
  */
-function protocolToRawData(jsonString) {
+function protocolToRawData(jsonData) {
   const KEY_PARAMS = 'params'
   const KEY_TYPE = 'type'
-  const jsonData = JSON.parse(jsonString)
   if (!Object.keys(jsonData).includes(KEY_TYPE) || !Object.keys(jsonData).includes(KEY_PARAMS)) {
     throw new Error('入参缺少 params 或 type 字段')
   }

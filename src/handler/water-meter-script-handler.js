@@ -2,9 +2,8 @@
  * 水表脚本
  * v1 2024-12-30 17:15
  * v2 2025-01-16 10:35 数据增加校验和base64编码
+ * v3.0 2025-02-05 16:29 删除 JSON.parse 和 Buffer 外部依赖
  */
-
-// const Buffer = require('buffer/').Buffer
 
 const DATA_TYPES = {
   UINT_8: {
@@ -136,17 +135,22 @@ const DATA_TYPE_MAP = {
  * {"inputConfig":{"identifier":"Time","address":254,"port":1},"result":{"data":"/gMIFBgMAQkPAy9xgQ==","port":1}}
  * 2. Version
  * {"inputConfig":{"identifier":"Version","address":254,"port":1},"result":{"data":"/gMEIpQBGX7y","port":1}}
- * @param {string} jsonString '{"inputConfig":{"deviceName":"","port":1,"address":1,"identifier":""},"result":{"data":"AQQExBxgAC9y","port":1}}' 
- * @param {string} jsonString.inputConfig 输入参数元配置(设备名称、端口号、从机地址、物模型标识符)
- * @param {string} jsonString.result 设备返回的数据(base64编码, 端口号)
- * @param {string} jsonString.identifier 物模型标识符
+ * @param {object} jsonData
+ * @param {object} jsonData.inputConfig 输入参数元配置(设备名称、端口号、从机地址、物模型标识符)
+ * @param {string} jsonData.inputConfig.identifier 物模型标识符
+ * @param {string} jsonData.inputConfig.address 从机地址
+ * @param {string} jsonData.inputConfig.port 端口号
+ * @param {object} jsonData.result 设备返回的数据(base64编码, 端口号)
+ * @param {string} jsonData.result.data base64编码的数据
+ * @param {string} jsonData.result.port 端口号
+ * @param {string} jsonData.identifier 物模型标识符
  * @returns {object} result
  * @returns {string} result.data 物模型属性值
  * @returns {string} result.identifier 物模型标识符
  * @returns {string} result.method 物模型方法 
  * thing.event.property.post (主动上报) | thing.service.property.get (属性获取) | thing.service.property.set (属性设置) | thing.service.${identifier} (动作调用)
  */
-function rawDataToProtocol(jsonString) {
+function rawDataToProtocol(jsonData) {
   const KEY_INPUT_CONFIG = 'inputConfig'
   const KEY_RESULT = 'result'
   const KEY_PORT = 'port'
@@ -154,7 +158,6 @@ function rawDataToProtocol(jsonString) {
   const KEY_IDENTIFIER = 'identifier'
   const KEY_DATA = 'data'
 
-  const jsonData = JSON.parse(jsonString)
   const dataKeys = Object.keys(jsonData)
   if (!dataKeys.includes(KEY_INPUT_CONFIG) || !dataKeys.includes(KEY_RESULT)) {
     throw new Error('入参缺少 inputConfig 或 result 字段')
@@ -225,20 +228,19 @@ function rawDataToProtocol(jsonString) {
  * {"address":"1","type":"set","params":{"identifier":"Time","inputData":{"Time":1736478033533}}}
  * 3. 动作调用
  * {"address":"1","type":"action","params":{"identifier": "Relay", "inputData": { "Relay": 1 }}}
- * @param {string} jsonString "{\"address\":\"1\",\"type\":\"get\",\"params\":{\"identifier\":Time}}"
- * @param {string} jsonString.address 从机地址
- * @param {string} jsonString.type 指令类型 get(属性抄读)/set(属性设置)/action(动作调用)
- * @param {object} jsonString.params key-value 键值对
- * @param {object} jsonString.params.identifier 标识符
- * @param {object} jsonString.params.inputData 输入参数(属性设置和动作调用类型使用)
- * @param {string} jsonString.deviceName 设备名称
+ * @param {object} jsonData
+ * @param {string} jsonData.address 从机地址
+ * @param {string} jsonData.type 指令类型 get(属性抄读)/set(属性设置)/action(动作调用)
+ * @param {object} jsonData.params key-value 键值对
+ * @param {object} jsonData.params.identifier 标识符
+ * @param {object} jsonData.params.inputData 输入参数(属性设置和动作调用类型使用)
+ * @param {string} jsonData.deviceName 设备名称
  * @returns {string} rawdata 设备能识别的格式数据
  */
-function protocolToRawData(jsonString) {
+function protocolToRawData(jsonData) {
   const KEY_ADDRESS = 'address'
   const KEY_PARAMS = 'params'
   const KEY_TYPE = 'type'
-  const jsonData = JSON.parse(jsonString)
   if (!Object.keys(jsonData).includes(KEY_ADDRESS) 
     || !Object.keys(jsonData).includes(KEY_TYPE)
     || !Object.keys(jsonData).includes(KEY_PARAMS)) {
