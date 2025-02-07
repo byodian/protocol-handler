@@ -17,56 +17,56 @@ beforeAll(() => {
 
 describe('protocolToRawData 云到设备 - 抄读数据', () => {
   it('FlowRate', () => {
-    const jsonString = '{"address":"1","type": "get","params":{"identifier":"FlowRate"}}'
+    const jsonString = { address: '1', type: 'get', params: { identifier: 'FlowRate' } }
     const data = protocolToRawData(jsonString)
     // expect(data).toBe('01041010000274CE')
     expect(data).toBe('AQQQEAACdM4=')
   })
 
   it('FlowVelocity', () => {
-    const jsonString = '{"address":"1","type": "get","params":{"identifier":"FlowVelocity"}}'
+    const jsonString = { address: '1', type: 'get', params: { identifier: 'FlowVelocity' } }
     const data = protocolToRawData(jsonString)
     // expect(data).toBe('010410120002D50E')
     expect(data).toBe('AQQQEgAC1Q4=')
   })
 
   it('FlowRateUnit', () => {
-    const jsonString = '{"address":"1","type": "get","params":{"identifier":"FlowRateUnit"}}'
+    const jsonString = { address: '1', type: 'get', params: { identifier: 'FlowRateUnit' } }
     const data = protocolToRawData(jsonString)
     // expect(data).toBe('01041020000134C0')
     expect(data).toBe('AQQQIAABNMA=')
   })
 
   it('TotalFlowUnit', () => {
-    const jsonString = '{"address":"1","type": "get","params":{"identifier":"TotalFlowUnit"}}'
+    const jsonString = { address: '1', type: 'get', params: { identifier: 'TotalFlowUnit' } }
     const data = protocolToRawData(jsonString)
     // expect(data).toBe('0104102100016500')
     expect(data).toBe('AQQQIQABZQA=')
   })
 
   it('AlarmEmptyPipe', () => {
-    const jsonString = '{"address":"1","type": "get","params":{"identifier":"AlarmEmptyPipe"}}'
+    const jsonString = { address: '1', type: 'get', params: { identifier: 'AlarmEmptyPipe' } }
     const data = protocolToRawData(jsonString)
     // expect(data).toBe('0104102400017501')
     expect(data).toBe('AQQQJAABdQE=')
   })
 
   it('AlarmSystem', () => {
-    const jsonString = '{"address":"1","type": "get","params":{"identifier":"AlarmSystem"}}'
+    const jsonString = { address: '1', type: 'get', params: { identifier: 'AlarmSystem' } }
     const data = protocolToRawData(jsonString)
     // expect(data).toBe('01041025000124C1')
     expect(data).toBe('AQQQJQABJME=')
   })
 
   it('AlarmLowerLimit', () => {
-    const jsonString = '{"address":"1","type": "get","params":{"identifier":"AlarmLowerLimit"}}'
+    const jsonString = { address: '1', type: 'get', params: { identifier: 'AlarmLowerLimit' } }
     const data = protocolToRawData(jsonString)
     // expect(data).toBe('010410230001C4C0')
     expect(data).toBe('AQQQIwABxMA=')
   })
 
   it('TotalFlow', () => {
-    const jsonString = '{"address":"1","type": "get","params":{"identifier":"TotalFlow"}}'
+    const jsonString = { address: '1', type: 'get', params: { identifier: 'TotalFlow' } }
     const data = protocolToRawData(jsonString)
     // expect(data).toBe('010410180004750E')
     expect(data).toBe('AQQQGAAEdQ4=')
@@ -76,7 +76,7 @@ describe('protocolToRawData 云到设备 - 抄读数据', () => {
 describe('设备到云消息解析', () => {
   it('FlowRate', () => {
     // hex: 010404C41C60002F72
-    const framJsonString = '{"inputConfig":{"identifier":"FlowRate","address":1,"port":1},"result":{"data":"AQQExBxgAC9y","port":1}}'
+    const framJsonString = { inputConfig: { identifier: 'FlowRate', address: 1, port: 1 }, result: { data: 'AQQExBxgAC9y', port: 1 } }
     const result = rawDataToProtocol(framJsonString)
     expect(result.data).toBe(-625.5)
     expect(result.identifier).toBe('FlowRate')
@@ -85,21 +85,21 @@ describe('设备到云消息解析', () => {
 
   it('TotalFlow', () => {
     // hex: 010408000070713F0000005F22
-    const framJsonString = '{"inputConfig":{"identifier":"TotalFlow","address":1,"port":1},"result":{"data":"AQQIAABwcT8AAABfIg==","port":1}}'
+    const framJsonString = { inputConfig: { identifier: 'TotalFlow', address: 1, port: 1 }, result: { data: 'AQQIAABwcT8AAABfIg==', port: 1 } }
     const result = rawDataToProtocol(framJsonString)
     expect(result.data).toBe(28785.5)
   })
 
   it('FlowRate', () => {
     // hex: 010404C41C60002F72
-    const framJsonString = '{"inputConfig":{"identifier":"FlowRate","address":1,"port":1},"result":{"data":"AQQExBxgAC9y","port":1}}'
+    const framJsonString = { inputConfig: { identifier: 'FlowRate', address: 1, port: 1 }, result: { data: 'AQQExBxgAC9y', port: 1 } }
     const result = rawDataToProtocol(framJsonString)
     expect(result.data).toBe(-625.5)
   })
 
   it('AlarmEmptyPipe', () => {
     // hex: 010402000178F0
-    const framJsonString = '{"inputConfig":{"identifier":"AlarmEmptyPipe","address":1,"port":1},"result":{"data":"AQQCAAF48A==","port":1}}'
+    const framJsonString = { inputConfig: { identifier: 'AlarmEmptyPipe', address: 1, port: 1 }, result: { data: 'AQQCAAF48A==', port: 1 } }
     const result = rawDataToProtocol(framJsonString)
     expect(result.data).toBe(1)
   })
